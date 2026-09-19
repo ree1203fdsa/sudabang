@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 
 const FIREBASE_URL = 'https://goatmxj-default-rtdb.asia-southeast1.firebasedatabase.app';
-const DB_PATH = path.join(__dirname, 'sudabang.db');
+const DB_PATH = process.env.VERCEL ? '/tmp/sudabang.db' : path.join(__dirname, 'sudabang.db');
 
 class BetterSqlite3Compat {
   constructor(sqlDb) {
@@ -111,7 +111,10 @@ let db = null;
 let saveInterval = null;
 
 async function initDatabase() {
-  const SQL = await initSqlJs();
+  const wasmPath = path.join(__dirname, 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+  const SQL = await initSqlJs({
+    locateFile: () => wasmPath
+  });
 
   let sqlDb;
   const firebaseData = await loadFromFirebase();
