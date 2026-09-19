@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\ree12\\\\Desktop\\\\���̺��ڵ�\\\\���ٹ�\\\\uploads\")",
+      "PowerShell(Get-Command node -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Command npm.cmd -ErrorAction SilentlyContinue)",
+      "PowerShell($paths = @\\(\"$env:ProgramFiles\\\\nodejs\", \"${env:ProgramFiles\\(x86\\)}\\\\nodejs\", \"$env:LOCALAPPDATA\\\\Programs\\\\nodejs\", \"$env:APPDATA\\\\npm\", \"C:\\\\nodejs\"\\); foreach \\($p in $paths\\) { if \\(Test-Path $p\\) { Write-Output \"FOUND: $p\"; Get-ChildItem $p -Name | Select-Object -First 10 } })",
+      "PowerShell(where.exe node 2>$null; Test-Path \"C:\\\\Program Files\\\\nodejs\\\\npm.cmd\"; Test-Path \"$env:LOCALAPPDATA\\\\Programs\\\\nodejs\\\\npm.cmd\")",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue; & \"C:\\\\Program Files\\\\nodejs\\\\npm.cmd\" install)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue; Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue; & \"C:\\\\Program Files\\\\nodejs\\\\npm.cmd\" install)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; & \"C:\\\\Program Files\\\\nodejs\\\\node.exe\" server.js)",
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\\\\public\\\\app.js\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\\\\public\\\\style.css\" | Measure-Object -Line\\).Lines)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Stop-Process -Name \"node\" -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; & \"C:\\\\Program Files\\\\nodejs\\\\node.exe\" server.js)",
+      "PowerShell(Stop-Process -Name \"node\" -Force -ErrorAction SilentlyContinue)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git status)"
+    ]
+  }
+}

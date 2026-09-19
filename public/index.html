@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6C63FF">
+  <meta name="description" content="수다방 - 함께 소통하는 커뮤니티">
+  <title>수다방</title>
+  <link rel="icon" href="logo.webp">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    // Socket.IO: 서버 실행 중이면 로드, 아니면 더미 객체 생성
+    if (typeof io === 'undefined') {
+      window._socketFallback = true;
+      window.io = function() {
+        return {
+          on: function(){},
+          emit: function(){},
+          disconnect: function(){},
+          connected: false
+        };
+      };
+    }
+  </script>
+  <script src="/socket.io/socket.io.js" onerror="console.log('Socket.IO not available - running without real-time features')"></script>
+  <script src="app.js"></script>
+</body>
+</html>
