@@ -8,22 +8,6 @@
   ],
   "routes": [
     {
-      "src": "/socket.io/(.*)",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/uploads/(.*)",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/(.*\\.(js|css|webp|png|jpg|gif|ico|svg|woff2?))",
-      "dest": "/public/$1"
-    },
-    {
       "src": "/(.*)",
       "dest": "/server.js"
     }

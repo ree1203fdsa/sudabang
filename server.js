@@ -20,6 +20,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'sudabang_secret';
 const TEACHER_CODE = process.env.TEACHER_CODE || '19467346';
 
 let db;
+let dbReady = null;
 
 // 업로드 디렉토리 생성
 const uploadDir = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, 'uploads');
@@ -57,6 +58,20 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { e
 
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', loginLimiter);
+
+app.use(async (req, res, next) => {
+  if (!db) {
+    if (!dbReady) {
+      dbReady = initDatabase().then(database => { db = database; });
+    }
+    try {
+      await dbReady;
+    } catch (e) {
+      return res.status(500).json({ error: '데이터베이스 초기화 실패' });
+    }
+  }
+  next();
+});
 
 // 욕설/일베 필터 단어 목록
 const BAD_WORDS = [
@@ -1616,14 +1631,7 @@ async function startServer() {
   });
 }
 
-if (process.env.VERCEL) {
-  initDatabase().then(database => {
-    db = database;
-    console.log('Vercel 환경에서 데이터베이스 초기화 완료');
-  }).catch(err => {
-    console.error('데이터베이스 초기화 실패:', err);
-  });
-} else {
+if (!process.env.VERCEL) {
   startServer().catch(err => {
     console.error('서버 시작 실패:', err);
     process.exit(1);
