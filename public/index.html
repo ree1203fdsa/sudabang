@@ -7,6 +7,11 @@
   <meta name="description" content="수다방 - 함께 소통하는 커뮤니티">
   <title>수다방</title>
   <link rel="icon" href="logo.webp">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="수다방">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -28,5 +33,10 @@
   </script>
   <script src="/socket.io/socket.io.js" onerror="console.log('Socket.IO not available - running without real-time features')"></script>
   <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
 </body>
 </html>
