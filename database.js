@@ -65,6 +65,7 @@ class BetterSqlite3Compat {
   }
 
   save() {
+    if (process.env.VERCEL) return;
     const data = this._db.export();
     fs.writeFileSync(DB_PATH, Buffer.from(data));
   }

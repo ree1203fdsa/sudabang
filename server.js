@@ -22,7 +22,7 @@ const TEACHER_CODE = process.env.TEACHER_CODE || '19467346';
 let db;
 
 // 업로드 디렉토리 생성
-const uploadDir = path.join(__dirname, 'uploads');
+const uploadDir = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 // Multer 설정
@@ -1616,7 +1616,18 @@ async function startServer() {
   });
 }
 
-startServer().catch(err => {
-  console.error('서버 시작 실패:', err);
-  process.exit(1);
-});
+if (process.env.VERCEL) {
+  initDatabase().then(database => {
+    db = database;
+    console.log('Vercel 환경에서 데이터베이스 초기화 완료');
+  }).catch(err => {
+    console.error('데이터베이스 초기화 실패:', err);
+  });
+} else {
+  startServer().catch(err => {
+    console.error('서버 시작 실패:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = app;
