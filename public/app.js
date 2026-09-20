@@ -405,6 +405,15 @@ const App = {
     if (pages[page]) pages[page]();
   },
 
+  async testPush() {
+    try {
+      const data = await this.api('/api/notifications/test-push', { method: 'POST' });
+      alert(data.message || '테스트 알림 전송!');
+    } catch (e) {
+      alert('알림 전송 실패: ' + e.message);
+    }
+  },
+
   async registerFCMToken() {
     try {
       let fcmToken = '';
@@ -490,6 +499,16 @@ const App = {
           <div style="font-size:14px;font-weight:700">상점</div>
           <div class="attendance-text">코인으로 아이템 구매</div>
           <button class="attendance-btn" style="background:var(--secondary)">둘러보기</button>
+        </div>
+      </div>
+
+      <!-- Push Test -->
+      <div class="attendance-card">
+        <div class="attendance-box" style="flex:1">
+          <div class="attendance-icon">🔔</div>
+          <div style="font-size:14px;font-weight:700">푸시 알림 테스트</div>
+          <div class="attendance-text">알림이 오는지 확인해보세요</div>
+          <button class="attendance-btn" style="background:#FF6B6B" onclick="App.testPush()">테스트 보내기</button>
         </div>
       </div>
 

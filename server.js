@@ -980,6 +980,16 @@ app.put('/api/notifications/:id/read', auth, (req, res) => {
   res.json({ message: '알림을 읽음 처리했습니다.' });
 });
 
+// 푸시 알림 테스트
+app.post('/api/notifications/test-push', auth, (req, res) => {
+  try {
+    createNotification(req.user.id, 'system', '알림 테스트', '푸시 알림이 정상 작동합니다! 🎉');
+    res.json({ message: '테스트 알림을 전송했습니다.' });
+  } catch (e) {
+    res.status(500).json({ error: '알림 전송 실패' });
+  }
+});
+
 // ==================== REPORTS API ====================
 
 app.post('/api/reports', auth, (req, res) => {
