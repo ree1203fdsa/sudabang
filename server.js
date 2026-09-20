@@ -164,27 +164,8 @@ function addCoins(userId, amount, reason) {
   }
 }
 
-// FCM 푸시 전송 함수
+// 푸시 알림 함수 (서비스 계정 없이는 Socket.IO로만 전달)
 async function sendPushNotification(userId, title, body, link = '') {
-  const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY;
-  if (!FCM_SERVER_KEY) return;
-  try {
-    const tokens = db.prepare('SELECT token FROM fcm_tokens WHERE user_id = ?').all(userId);
-    for (const row of tokens) {
-      fetch('https://fcm.googleapis.com/fcm/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `key=${FCM_SERVER_KEY}`
-        },
-        body: JSON.stringify({
-          to: row.token,
-          notification: { title, body, sound: 'default' },
-          data: { title, body, link }
-        })
-      }).catch(() => {});
-    }
-  } catch (e) {}
 }
 
 // 알림 생성 함수
