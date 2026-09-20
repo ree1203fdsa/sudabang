@@ -502,16 +502,6 @@ const App = {
         </div>
       </div>
 
-      <!-- Push Test -->
-      <div class="attendance-card">
-        <div class="attendance-box" style="flex:1">
-          <div class="attendance-icon">🔔</div>
-          <div style="font-size:14px;font-weight:700">푸시 알림 테스트</div>
-          <div class="attendance-text">알림이 오는지 확인해보세요</div>
-          <button class="attendance-btn" style="background:#FF6B6B" onclick="App.testPush()">테스트 보내기</button>
-        </div>
-      </div>
-
       <!-- Notices -->
       <div id="home-notices"></div>
 
@@ -1649,6 +1639,10 @@ const App = {
         </div>
         <div class="settings-item" onclick="App.showBlockList()">
           <div class="settings-item-left"><i class="fas fa-ban"></i><span class="settings-item-label">차단 목록</span></div>
+          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="settings-item" onclick="App.testPush()">
+          <div class="settings-item-left"><i class="fas fa-bell" style="color:#FF6B6B"></i><span class="settings-item-label">푸시 알림 테스트</span></div>
           <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
         </div>
         <div class="settings-item" onclick="App.logout()">
