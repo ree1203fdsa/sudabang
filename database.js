@@ -3,7 +3,7 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 
-const FIREBASE_URL = 'https://test-44d52-default-rtdb.asia-southeast1.firebasedatabase.app';
+const FIREBASE_URL = 'https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app';
 const DB_PATH = process.env.VERCEL ? '/tmp/sudabang.db' : path.join(__dirname, 'sudabang.db');
 
 class BetterSqlite3Compat {
@@ -69,37 +69,39 @@ class BetterSqlite3Compat {
     const data = this._db.export();
     fs.writeFileSync(DB_PATH, Buffer.from(data));
   }
+}
 
-  async saveToFirebase() {
-    if (!this._dirty) return;
-    try {
-      const data = this._db.export();
-      const base64 = Buffer.from(data).toString('base64');
-      const res = await fetch(`${FIREBASE_URL}/sudabang_db.json`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(base64)
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`HTTP ${res.status}: ${err}`);
-      }
-      this._dirty = false;
+async function saveToFirebase(db) {
+  if (!db._dirty) return;
+  try {
+    const data = db._db.export();
+    const base64 = Buffer.from(data).toString('base64');
+    const res = await fetch(`${FIREBASE_URL}/database.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ backup: base64, updatedAt: new Date().toISOString() })
+    });
+    if (res.ok) {
+      db._dirty = false;
       console.log('[Firebase] 데이터베이스 저장 완료');
-    } catch (e) {
-      console.error('[Firebase] 저장 실패:', e.message);
-      this.save();
+    } else {
+      console.error('[Firebase] 저장 실패:', res.status);
     }
+  } catch (e) {
+    console.error('[Firebase] 저장 실패:', e.message);
+    db.save();
   }
 }
 
 async function loadFromFirebase() {
   try {
-    const res = await fetch(`${FIREBASE_URL}/sudabang_db.json`);
-    const data = await res.json();
-    if (data && typeof data === 'string') {
-      console.log('[Firebase] 데이터베이스 로드 완료');
-      return Buffer.from(data, 'base64');
+    const res = await fetch(`${FIREBASE_URL}/database/backup.json`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === 'string' && data.length > 100) {
+        console.log('[Firebase] 데이터베이스 로드 완료');
+        return Buffer.from(data, 'base64');
+      }
     }
   } catch (e) {
     console.error('[Firebase] 로드 실패:', e.message);
@@ -117,9 +119,9 @@ async function initDatabase() {
   });
 
   let sqlDb;
-  const firebaseData = await loadFromFirebase();
-  if (firebaseData) {
-    sqlDb = new SQL.Database(firebaseData);
+  const cloudData = await loadFromFirebase();
+  if (cloudData) {
+    sqlDb = new SQL.Database(cloudData);
   } else if (fs.existsSync(DB_PATH)) {
     const fileBuffer = fs.readFileSync(DB_PATH);
     sqlDb = new SQL.Database(fileBuffer);
@@ -133,7 +135,6 @@ async function initDatabase() {
   db.pragma('foreign_keys = ON');
 
   db.exec(`
-    -- 사용자 테이블
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
@@ -537,7 +538,6 @@ async function initDatabase() {
     UNIQUE(poll_id, user_id)
   )`);
 
-  // 개발자 계정 생성 또는 비밀번호 갱신
   const adminPassword = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin1234', 10);
   const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get('ree1203');
   if (!adminExists) {
@@ -549,7 +549,6 @@ async function initDatabase() {
     db.prepare('UPDATE users SET password = ?, role = ? WHERE username = ?').run(adminPassword, 'admin', 'ree1203');
   }
 
-  // 기본 상점 아이템 생성
   const itemCount = db.prepare('SELECT COUNT(*) as cnt FROM shop_items').get();
   if (itemCount.cnt === 0) {
     const items = [
@@ -573,7 +572,6 @@ async function initDatabase() {
     }
   }
 
-  // 기본 공개 채팅방 생성
   const roomCount = db.prepare('SELECT COUNT(*) as cnt FROM chat_rooms').get();
   if (roomCount.cnt === 0) {
     const admin = db.prepare('SELECT id FROM users WHERE username = ?').get('ree1203');
@@ -585,16 +583,15 @@ async function initDatabase() {
     }
   }
 
-  await db.saveToFirebase();
+  db._dirty = true;
+  await saveToFirebase(db);
 
-  // 주기적으로 Firebase에 저장 (30초마다)
   saveInterval = setInterval(() => {
-    db.saveToFirebase().catch(() => {});
+    saveToFirebase(db).catch(() => {});
   }, 30000);
 
-  // 종료 시 저장
   process.on('SIGINT', async () => {
-    await db.saveToFirebase();
+    await saveToFirebase(db);
     process.exit(0);
   });
 

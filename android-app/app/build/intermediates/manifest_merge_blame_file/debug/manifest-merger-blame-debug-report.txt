@@ -1,0 +1,111 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.sudabang.app"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="24"
+9        android:targetSdkVersion="34" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:4:5-67
+11-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:4:22-64
+12    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+12-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:5:5-79
+12-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:5:22-76
+13    <uses-permission android:name="android.permission.VIBRATE" />
+13-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:6:5-66
+13-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:6:22-63
+14
+15    <permission
+15-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:22:5-24:47
+16        android:name="com.sudabang.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+16-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:23:9-81
+17        android:protectionLevel="signature" />
+17-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:24:9-44
+18
+19    <uses-permission android:name="com.sudabang.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+19-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:26:5-97
+19-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:26:22-94
+20
+21    <application
+21-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:8:5-36:19
+22        android:allowBackup="true"
+22-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:9:9-35
+23        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+23-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:28:18-86
+24        android:debuggable="true"
+25        android:extractNativeLibs="false"
+26        android:hardwareAccelerated="true"
+26-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:16:9-43
+27        android:icon="@mipmap/ic_launcher"
+27-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:10:9-43
+28        android:label="수다방"
+28-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:11:9-28
+29        android:roundIcon="@mipmap/ic_launcher"
+29-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:12:9-48
+30        android:supportsRtl="true"
+30-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:13:9-35
+31        android:theme="@style/AppTheme"
+31-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:14:9-40
+32        android:usesCleartextTraffic="true" >
+32-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:15:9-44
+33        <activity
+33-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:18:9-27:20
+34            android:name="com.sudabang.app.SplashActivity"
+34-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:19:13-43
+35            android:exported="true"
+35-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:20:13-36
+36            android:screenOrientation="portrait"
+36-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:22:13-49
+37            android:theme="@style/SplashTheme" >
+37-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:21:13-47
+38            <intent-filter>
+38-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:23:13-26:29
+39                <action android:name="android.intent.action.MAIN" />
+39-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:24:17-69
+39-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:24:25-66
+40
+41                <category android:name="android.intent.category.LAUNCHER" />
+41-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:25:17-77
+41-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:25:27-74
+42            </intent-filter>
+43        </activity>
+44        <activity
+44-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:29:9-34:58
+45            android:name="com.sudabang.app.MainActivity"
+45-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:30:13-41
+46            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|layoutDirection|locale"
+46-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:32:13-106
+47            android:exported="false"
+47-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:31:13-37
+48            android:screenOrientation="portrait"
+48-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:33:13-49
+49            android:windowSoftInputMode="adjustResize" />
+49-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:34:13-55
+50
+51        <provider
+51-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
+52            android:name="androidx.startup.InitializationProvider"
+52-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:25:13-67
+53            android:authorities="com.sudabang.app.androidx-startup"
+53-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:26:13-68
+54            android:exported="false" >
+54-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:27:13-37
+55            <meta-data
+55-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
+56                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+56-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:30:17-75
+57                android:value="androidx.startup" />
+57-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:31:17-49
+58            <meta-data
+58-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ree12\.gradle\caches\transforms-3\6981fecde41137243de6bec638d7b189\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:31:13-33:52
+59                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+59-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ree12\.gradle\caches\transforms-3\6981fecde41137243de6bec638d7b189\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:32:17-78
+60                android:value="androidx.startup" />
+60-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ree12\.gradle\caches\transforms-3\6981fecde41137243de6bec638d7b189\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:33:17-49
+61        </provider>
+62    </application>
+63
+64</manifest>
