@@ -318,7 +318,7 @@ const App = {
     app.innerHTML = `
       <div class="app-layout">
         <div class="top-header">
-          <div class="top-header-logo">
+          <div class="top-header-logo" onclick="App.navigate('home')" style="cursor:pointer">
             <img src="logo.webp" alt="수다방" style="width:32px;height:32px;object-fit:contain;border-radius:6px"> 수다방
           </div>
           <div class="top-header-right">

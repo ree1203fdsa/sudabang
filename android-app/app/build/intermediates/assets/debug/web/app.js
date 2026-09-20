@@ -405,6 +405,15 @@ const App = {
     if (pages[page]) pages[page]();
   },
 
+  async testPush() {
+    try {
+      const data = await this.api('/api/notifications/test-push', { method: 'POST' });
+      alert(data.message || '테스트 알림 전송!');
+    } catch (e) {
+      alert('알림 전송 실패: ' + e.message);
+    }
+  },
+
   async registerFCMToken() {
     try {
       let fcmToken = '';
@@ -1630,6 +1639,10 @@ const App = {
         </div>
         <div class="settings-item" onclick="App.showBlockList()">
           <div class="settings-item-left"><i class="fas fa-ban"></i><span class="settings-item-label">차단 목록</span></div>
+          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="settings-item" onclick="App.testPush()">
+          <div class="settings-item-left"><i class="fas fa-bell" style="color:#FF6B6B"></i><span class="settings-item-label">푸시 알림 테스트</span></div>
           <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
         </div>
         <div class="settings-item" onclick="App.logout()">
