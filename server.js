@@ -62,12 +62,17 @@ app.use('/api/auth/login', loginLimiter);
 app.use(async (req, res, next) => {
   if (!db) {
     if (!dbReady) {
-      dbReady = initDatabase().then(database => { db = database; });
+      dbReady = initDatabase().then(database => { db = database; }).catch(e => {
+        console.error('DB 초기화 에러:', e);
+        dbReady = null;
+        throw e;
+      });
     }
     try {
       await dbReady;
     } catch (e) {
-      return res.status(500).json({ error: '데이터베이스 초기화 실패' });
+      dbReady = null;
+      return res.status(500).json({ error: '데이터베이스 초기화 실패: ' + e.message });
     }
   }
   next();

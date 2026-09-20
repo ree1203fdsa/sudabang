@@ -17,95 +17,269 @@
 13    <uses-permission android:name="android.permission.VIBRATE" />
 13-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:6:5-66
 13-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:6:22-63
-14
-15    <permission
-15-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:22:5-24:47
-16        android:name="com.sudabang.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-16-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:23:9-81
-17        android:protectionLevel="signature" />
-17-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:24:9-44
-18
-19    <uses-permission android:name="com.sudabang.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
-19-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:26:5-97
-19-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:26:22-94
-20
-21    <application
-21-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:8:5-36:19
-22        android:allowBackup="true"
-22-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:9:9-35
-23        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-23-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\58965ab1a2bf12ef28df7731ee942225\transformed\core-1.9.0\AndroidManifest.xml:28:18-86
-24        android:debuggable="true"
-25        android:extractNativeLibs="false"
-26        android:hardwareAccelerated="true"
-26-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:16:9-43
-27        android:icon="@mipmap/ic_launcher"
-27-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:10:9-43
-28        android:label="수다방"
-28-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:11:9-28
-29        android:roundIcon="@mipmap/ic_launcher"
-29-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:12:9-48
-30        android:supportsRtl="true"
-30-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:13:9-35
-31        android:theme="@style/AppTheme"
-31-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:14:9-40
-32        android:usesCleartextTraffic="true" >
-32-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:15:9-44
-33        <activity
-33-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:18:9-27:20
-34            android:name="com.sudabang.app.SplashActivity"
-34-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:19:13-43
-35            android:exported="true"
-35-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:20:13-36
-36            android:screenOrientation="portrait"
-36-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:22:13-49
-37            android:theme="@style/SplashTheme" >
-37-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:21:13-47
-38            <intent-filter>
-38-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:23:13-26:29
-39                <action android:name="android.intent.action.MAIN" />
-39-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:24:17-69
-39-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:24:25-66
-40
-41                <category android:name="android.intent.category.LAUNCHER" />
-41-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:25:17-77
-41-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:25:27-74
-42            </intent-filter>
-43        </activity>
-44        <activity
-44-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:29:9-34:58
-45            android:name="com.sudabang.app.MainActivity"
-45-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:30:13-41
-46            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|layoutDirection|locale"
-46-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:32:13-106
-47            android:exported="false"
-47-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:31:13-37
-48            android:screenOrientation="portrait"
-48-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:33:13-49
-49            android:windowSoftInputMode="adjustResize" />
-49-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:34:13-55
-50
-51        <provider
-51-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
-52            android:name="androidx.startup.InitializationProvider"
-52-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:25:13-67
-53            android:authorities="com.sudabang.app.androidx-startup"
-53-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:26:13-68
-54            android:exported="false" >
-54-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:27:13-37
-55            <meta-data
-55-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
-56                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-56-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:30:17-75
-57                android:value="androidx.startup" />
-57-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\73898d6b9e4b9aa792280f8586ec2357\transformed\emoji2-1.2.0\AndroidManifest.xml:31:17-49
-58            <meta-data
-58-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ree12\.gradle\caches\transforms-3\6981fecde41137243de6bec638d7b189\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:31:13-33:52
-59                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-59-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ree12\.gradle\caches\transforms-3\6981fecde41137243de6bec638d7b189\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:32:17-78
-60                android:value="androidx.startup" />
-60-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ree12\.gradle\caches\transforms-3\6981fecde41137243de6bec638d7b189\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:33:17-49
-61        </provider>
-62    </application>
-63
-64</manifest>
+14    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+14-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:7:5-77
+14-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:7:22-74
+15    <uses-permission android:name="android.permission.WAKE_LOCK" /> <!-- Required by older versions of Google Play services to create IID tokens -->
+15-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:24:5-68
+15-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:24:22-65
+16    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+16-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:26:5-82
+16-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:26:22-79
+17
+18    <permission
+18-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\056547b6045d89167d38239381898b20\transformed\core-1.9.0\AndroidManifest.xml:22:5-24:47
+19        android:name="com.sudabang.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+19-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\056547b6045d89167d38239381898b20\transformed\core-1.9.0\AndroidManifest.xml:23:9-81
+20        android:protectionLevel="signature" />
+20-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\056547b6045d89167d38239381898b20\transformed\core-1.9.0\AndroidManifest.xml:24:9-44
+21
+22    <uses-permission android:name="com.sudabang.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+22-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\056547b6045d89167d38239381898b20\transformed\core-1.9.0\AndroidManifest.xml:26:5-97
+22-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\056547b6045d89167d38239381898b20\transformed\core-1.9.0\AndroidManifest.xml:26:22-94
+23
+24    <application
+24-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:9:5-45:19
+25        android:allowBackup="true"
+25-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:10:9-35
+26        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+26-->[androidx.core:core:1.9.0] C:\Users\ree12\.gradle\caches\transforms-3\056547b6045d89167d38239381898b20\transformed\core-1.9.0\AndroidManifest.xml:28:18-86
+27        android:debuggable="true"
+28        android:extractNativeLibs="false"
+29        android:hardwareAccelerated="true"
+29-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:17:9-43
+30        android:icon="@mipmap/ic_launcher"
+30-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:11:9-43
+31        android:label="수다방"
+31-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:12:9-28
+32        android:roundIcon="@mipmap/ic_launcher"
+32-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:13:9-48
+33        android:supportsRtl="true"
+33-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:14:9-35
+34        android:theme="@style/AppTheme"
+34-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:15:9-40
+35        android:usesCleartextTraffic="true" >
+35-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:16:9-44
+36        <activity
+36-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:19:9-28:20
+37            android:name="com.sudabang.app.SplashActivity"
+37-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:20:13-43
+38            android:exported="true"
+38-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:21:13-36
+39            android:screenOrientation="portrait"
+39-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:23:13-49
+40            android:theme="@style/SplashTheme" >
+40-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:22:13-47
+41            <intent-filter>
+41-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:24:13-27:29
+42                <action android:name="android.intent.action.MAIN" />
+42-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:25:17-69
+42-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:25:25-66
+43
+44                <category android:name="android.intent.category.LAUNCHER" />
+44-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:26:17-77
+44-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:26:27-74
+45            </intent-filter>
+46        </activity>
+47        <activity
+47-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:30:9-35:58
+48            android:name="com.sudabang.app.MainActivity"
+48-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:31:13-41
+49            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|layoutDirection|locale"
+49-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:33:13-106
+50            android:exported="false"
+50-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:32:13-37
+51            android:screenOrientation="portrait"
+51-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:34:13-49
+52            android:windowSoftInputMode="adjustResize" />
+52-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:35:13-55
+53
+54        <service
+54-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:37:9-43:19
+55            android:name="com.sudabang.app.MyFirebaseMessagingService"
+55-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:38:13-55
+56            android:exported="false" >
+56-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:39:13-37
+57            <intent-filter>
+57-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:40:13-42:29
+58                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+58-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:41:17-78
+58-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:41:25-75
+59            </intent-filter>
+60        </service>
+61
+62        <receiver
+62-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:29:9-40:20
+63            android:name="com.google.firebase.iid.FirebaseInstanceIdReceiver"
+63-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:30:13-78
+64            android:exported="true"
+64-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:31:13-36
+65            android:permission="com.google.android.c2dm.permission.SEND" >
+65-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:32:13-73
+66            <intent-filter>
+66-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:33:13-35:29
+67                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+67-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:34:17-81
+67-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:34:25-78
+68            </intent-filter>
+69
+70            <meta-data
+70-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:37:13-39:40
+71                android:name="com.google.android.gms.cloudmessaging.FINISHED_AFTER_HANDLED"
+71-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:38:17-92
+72                android:value="true" />
+72-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:39:17-37
+73        </receiver>
+74        <!--
+75             FirebaseMessagingService performs security checks at runtime,
+76             but set to not exported to explicitly avoid allowing another app to call it.
+77        -->
+78        <service
+78-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:46:9-53:19
+79            android:name="com.google.firebase.messaging.FirebaseMessagingService"
+79-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:47:13-82
+80            android:directBootAware="true"
+80-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:48:13-43
+81            android:exported="false" >
+81-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:49:13-37
+82            <intent-filter android:priority="-500" >
+82-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:40:13-42:29
+83                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+83-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:41:17-78
+83-->C:\Users\ree12\Desktop\바이브코딩\수다방\android-app\app\src\main\AndroidManifest.xml:41:25-75
+84            </intent-filter>
+85        </service>
+86        <service
+86-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:54:9-63:19
+87            android:name="com.google.firebase.components.ComponentDiscoveryService"
+87-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:55:13-84
+88            android:directBootAware="true"
+88-->[com.google.firebase:firebase-common:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\b0dc5d1af9038ab73e6c78520bc73990\transformed\firebase-common-20.4.2\AndroidManifest.xml:32:13-43
+89            android:exported="false" >
+89-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:56:13-37
+90            <meta-data
+90-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:57:13-59:85
+91                android:name="com.google.firebase.components:com.google.firebase.messaging.FirebaseMessagingKtxRegistrar"
+91-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:58:17-122
+92                android:value="com.google.firebase.components.ComponentRegistrar" />
+92-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:59:17-82
+93            <meta-data
+93-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:60:13-62:85
+94                android:name="com.google.firebase.components:com.google.firebase.messaging.FirebaseMessagingRegistrar"
+94-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:61:17-119
+95                android:value="com.google.firebase.components.ComponentRegistrar" />
+95-->[com.google.firebase:firebase-messaging:23.4.0] C:\Users\ree12\.gradle\caches\transforms-3\c693eb46daabc128eb66a9b6824f01c9\transformed\firebase-messaging-23.4.0\AndroidManifest.xml:62:17-82
+96            <meta-data
+96-->[com.google.firebase:firebase-datatransport:18.1.7] C:\Users\ree12\.gradle\caches\transforms-3\c005348ab6071e69f4362d84c77cf460\transformed\firebase-datatransport-18.1.7\AndroidManifest.xml:27:13-29:85
+97                android:name="com.google.firebase.components:com.google.firebase.datatransport.TransportRegistrar"
+97-->[com.google.firebase:firebase-datatransport:18.1.7] C:\Users\ree12\.gradle\caches\transforms-3\c005348ab6071e69f4362d84c77cf460\transformed\firebase-datatransport-18.1.7\AndroidManifest.xml:28:17-115
+98                android:value="com.google.firebase.components.ComponentRegistrar" />
+98-->[com.google.firebase:firebase-datatransport:18.1.7] C:\Users\ree12\.gradle\caches\transforms-3\c005348ab6071e69f4362d84c77cf460\transformed\firebase-datatransport-18.1.7\AndroidManifest.xml:29:17-82
+99            <meta-data
+99-->[com.google.firebase:firebase-installations:17.2.0] C:\Users\ree12\.gradle\caches\transforms-3\f79f09dca948feae6f9f44e8a4b0b0b3\transformed\firebase-installations-17.2.0\AndroidManifest.xml:15:13-17:85
+100                android:name="com.google.firebase.components:com.google.firebase.installations.FirebaseInstallationsKtxRegistrar"
+100-->[com.google.firebase:firebase-installations:17.2.0] C:\Users\ree12\.gradle\caches\transforms-3\f79f09dca948feae6f9f44e8a4b0b0b3\transformed\firebase-installations-17.2.0\AndroidManifest.xml:16:17-130
+101                android:value="com.google.firebase.components.ComponentRegistrar" />
+101-->[com.google.firebase:firebase-installations:17.2.0] C:\Users\ree12\.gradle\caches\transforms-3\f79f09dca948feae6f9f44e8a4b0b0b3\transformed\firebase-installations-17.2.0\AndroidManifest.xml:17:17-82
+102            <meta-data
+102-->[com.google.firebase:firebase-installations:17.2.0] C:\Users\ree12\.gradle\caches\transforms-3\f79f09dca948feae6f9f44e8a4b0b0b3\transformed\firebase-installations-17.2.0\AndroidManifest.xml:18:13-20:85
+103                android:name="com.google.firebase.components:com.google.firebase.installations.FirebaseInstallationsRegistrar"
+103-->[com.google.firebase:firebase-installations:17.2.0] C:\Users\ree12\.gradle\caches\transforms-3\f79f09dca948feae6f9f44e8a4b0b0b3\transformed\firebase-installations-17.2.0\AndroidManifest.xml:19:17-127
+104                android:value="com.google.firebase.components.ComponentRegistrar" />
+104-->[com.google.firebase:firebase-installations:17.2.0] C:\Users\ree12\.gradle\caches\transforms-3\f79f09dca948feae6f9f44e8a4b0b0b3\transformed\firebase-installations-17.2.0\AndroidManifest.xml:20:17-82
+105            <meta-data
+105-->[com.google.firebase:firebase-common-ktx:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\2c830c79b965477f58bc5ab858a5dcf0\transformed\firebase-common-ktx-20.4.2\AndroidManifest.xml:12:13-14:85
+106                android:name="com.google.firebase.components:com.google.firebase.ktx.FirebaseCommonLegacyRegistrar"
+106-->[com.google.firebase:firebase-common-ktx:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\2c830c79b965477f58bc5ab858a5dcf0\transformed\firebase-common-ktx-20.4.2\AndroidManifest.xml:13:17-116
+107                android:value="com.google.firebase.components.ComponentRegistrar" />
+107-->[com.google.firebase:firebase-common-ktx:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\2c830c79b965477f58bc5ab858a5dcf0\transformed\firebase-common-ktx-20.4.2\AndroidManifest.xml:14:17-82
+108            <meta-data
+108-->[com.google.firebase:firebase-common:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\b0dc5d1af9038ab73e6c78520bc73990\transformed\firebase-common-20.4.2\AndroidManifest.xml:35:13-37:85
+109                android:name="com.google.firebase.components:com.google.firebase.FirebaseCommonKtxRegistrar"
+109-->[com.google.firebase:firebase-common:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\b0dc5d1af9038ab73e6c78520bc73990\transformed\firebase-common-20.4.2\AndroidManifest.xml:36:17-109
+110                android:value="com.google.firebase.components.ComponentRegistrar" />
+110-->[com.google.firebase:firebase-common:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\b0dc5d1af9038ab73e6c78520bc73990\transformed\firebase-common-20.4.2\AndroidManifest.xml:37:17-82
+111        </service>
+112        <service
+112-->[com.google.android.datatransport:transport-backend-cct:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\6bf7a71f2bbd287ec4d3cf803fc60a81\transformed\transport-backend-cct-3.1.8\AndroidManifest.xml:28:9-34:19
+113            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+113-->[com.google.android.datatransport:transport-backend-cct:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\6bf7a71f2bbd287ec4d3cf803fc60a81\transformed\transport-backend-cct-3.1.8\AndroidManifest.xml:29:13-103
+114            android:exported="false" >
+114-->[com.google.android.datatransport:transport-backend-cct:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\6bf7a71f2bbd287ec4d3cf803fc60a81\transformed\transport-backend-cct-3.1.8\AndroidManifest.xml:30:13-37
+115            <meta-data
+115-->[com.google.android.datatransport:transport-backend-cct:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\6bf7a71f2bbd287ec4d3cf803fc60a81\transformed\transport-backend-cct-3.1.8\AndroidManifest.xml:31:13-33:39
+116                android:name="backend:com.google.android.datatransport.cct.CctBackendFactory"
+116-->[com.google.android.datatransport:transport-backend-cct:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\6bf7a71f2bbd287ec4d3cf803fc60a81\transformed\transport-backend-cct-3.1.8\AndroidManifest.xml:32:17-94
+117                android:value="cct" />
+117-->[com.google.android.datatransport:transport-backend-cct:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\6bf7a71f2bbd287ec4d3cf803fc60a81\transformed\transport-backend-cct-3.1.8\AndroidManifest.xml:33:17-36
+118        </service>
+119        <service
+119-->[com.google.android.datatransport:transport-runtime:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\e74f69f4af97e6e14d266f0494164fde\transformed\transport-runtime-3.1.8\AndroidManifest.xml:26:9-30:19
+120            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
+120-->[com.google.android.datatransport:transport-runtime:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\e74f69f4af97e6e14d266f0494164fde\transformed\transport-runtime-3.1.8\AndroidManifest.xml:27:13-117
+121            android:exported="false"
+121-->[com.google.android.datatransport:transport-runtime:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\e74f69f4af97e6e14d266f0494164fde\transformed\transport-runtime-3.1.8\AndroidManifest.xml:28:13-37
+122            android:permission="android.permission.BIND_JOB_SERVICE" >
+122-->[com.google.android.datatransport:transport-runtime:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\e74f69f4af97e6e14d266f0494164fde\transformed\transport-runtime-3.1.8\AndroidManifest.xml:29:13-69
+123        </service>
+124
+125        <receiver
+125-->[com.google.android.datatransport:transport-runtime:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\e74f69f4af97e6e14d266f0494164fde\transformed\transport-runtime-3.1.8\AndroidManifest.xml:32:9-34:40
+126            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
+126-->[com.google.android.datatransport:transport-runtime:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\e74f69f4af97e6e14d266f0494164fde\transformed\transport-runtime-3.1.8\AndroidManifest.xml:33:13-132
+127            android:exported="false" />
+127-->[com.google.android.datatransport:transport-runtime:3.1.8] C:\Users\ree12\.gradle\caches\transforms-3\e74f69f4af97e6e14d266f0494164fde\transformed\transport-runtime-3.1.8\AndroidManifest.xml:34:13-37
+128
+129        <provider
+129-->[com.google.firebase:firebase-common:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\b0dc5d1af9038ab73e6c78520bc73990\transformed\firebase-common-20.4.2\AndroidManifest.xml:23:9-28:39
+130            android:name="com.google.firebase.provider.FirebaseInitProvider"
+130-->[com.google.firebase:firebase-common:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\b0dc5d1af9038ab73e6c78520bc73990\transformed\firebase-common-20.4.2\AndroidManifest.xml:24:13-77
+131            android:authorities="com.sudabang.app.firebaseinitprovider"
+131-->[com.google.firebase:firebase-common:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\b0dc5d1af9038ab73e6c78520bc73990\transformed\firebase-common-20.4.2\AndroidManifest.xml:25:13-72
+132            android:directBootAware="true"
+132-->[com.google.firebase:firebase-common:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\b0dc5d1af9038ab73e6c78520bc73990\transformed\firebase-common-20.4.2\AndroidManifest.xml:26:13-43
+133            android:exported="false"
+133-->[com.google.firebase:firebase-common:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\b0dc5d1af9038ab73e6c78520bc73990\transformed\firebase-common-20.4.2\AndroidManifest.xml:27:13-37
+134            android:initOrder="100" />
+134-->[com.google.firebase:firebase-common:20.4.2] C:\Users\ree12\.gradle\caches\transforms-3\b0dc5d1af9038ab73e6c78520bc73990\transformed\firebase-common-20.4.2\AndroidManifest.xml:28:13-36
+135
+136        <activity
+136-->[com.google.android.gms:play-services-base:18.0.1] C:\Users\ree12\.gradle\caches\transforms-3\7835f6c7c1b25dfc8c5ba6b1d8911ca5\transformed\play-services-base-18.0.1\AndroidManifest.xml:20:9-22:45
+137            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+137-->[com.google.android.gms:play-services-base:18.0.1] C:\Users\ree12\.gradle\caches\transforms-3\7835f6c7c1b25dfc8c5ba6b1d8911ca5\transformed\play-services-base-18.0.1\AndroidManifest.xml:20:19-85
+138            android:exported="false"
+138-->[com.google.android.gms:play-services-base:18.0.1] C:\Users\ree12\.gradle\caches\transforms-3\7835f6c7c1b25dfc8c5ba6b1d8911ca5\transformed\play-services-base-18.0.1\AndroidManifest.xml:22:19-43
+139            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+139-->[com.google.android.gms:play-services-base:18.0.1] C:\Users\ree12\.gradle\caches\transforms-3\7835f6c7c1b25dfc8c5ba6b1d8911ca5\transformed\play-services-base-18.0.1\AndroidManifest.xml:21:19-78
+140
+141        <meta-data
+141-->[com.google.android.gms:play-services-basement:18.1.0] C:\Users\ree12\.gradle\caches\transforms-3\c87143acdd8d1ce8ce33fcd7a5569472\transformed\play-services-basement-18.1.0\AndroidManifest.xml:21:9-23:69
+142            android:name="com.google.android.gms.version"
+142-->[com.google.android.gms:play-services-basement:18.1.0] C:\Users\ree12\.gradle\caches\transforms-3\c87143acdd8d1ce8ce33fcd7a5569472\transformed\play-services-basement-18.1.0\AndroidManifest.xml:22:13-58
+143            android:value="@integer/google_play_services_version" />
+143-->[com.google.android.gms:play-services-basement:18.1.0] C:\Users\ree12\.gradle\caches\transforms-3\c87143acdd8d1ce8ce33fcd7a5569472\transformed\play-services-basement-18.1.0\AndroidManifest.xml:23:13-66
+144
+145        <provider
+145-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\a4ae75287a27fa14dbfb0b5d963145d2\transformed\emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
+146            android:name="androidx.startup.InitializationProvider"
+146-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\a4ae75287a27fa14dbfb0b5d963145d2\transformed\emoji2-1.2.0\AndroidManifest.xml:25:13-67
+147            android:authorities="com.sudabang.app.androidx-startup"
+147-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\a4ae75287a27fa14dbfb0b5d963145d2\transformed\emoji2-1.2.0\AndroidManifest.xml:26:13-68
+148            android:exported="false" >
+148-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\a4ae75287a27fa14dbfb0b5d963145d2\transformed\emoji2-1.2.0\AndroidManifest.xml:27:13-37
+149            <meta-data
+149-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\a4ae75287a27fa14dbfb0b5d963145d2\transformed\emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
+150                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+150-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\a4ae75287a27fa14dbfb0b5d963145d2\transformed\emoji2-1.2.0\AndroidManifest.xml:30:17-75
+151                android:value="androidx.startup" />
+151-->[androidx.emoji2:emoji2:1.2.0] C:\Users\ree12\.gradle\caches\transforms-3\a4ae75287a27fa14dbfb0b5d963145d2\transformed\emoji2-1.2.0\AndroidManifest.xml:31:17-49
+152            <meta-data
+152-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ree12\.gradle\caches\transforms-3\ba942dd5399d9176312f64b2ea466840\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:31:13-33:52
+153                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+153-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ree12\.gradle\caches\transforms-3\ba942dd5399d9176312f64b2ea466840\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:32:17-78
+154                android:value="androidx.startup" />
+154-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\ree12\.gradle\caches\transforms-3\ba942dd5399d9176312f64b2ea466840\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:33:17-49
+155        </provider>
+156    </application>
+157
+158</manifest>

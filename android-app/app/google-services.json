@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "383583961591",
+    "firebase_url": "https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "tnekqkd",
+    "storage_bucket": "tnekqkd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:383583961591:android:f7ad79ba2da7511159eef2",
+        "android_client_info": {
+          "package_name": "com.sudabang.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqyNwsIdVLLoMxXPjlJKdYNRzclBoYAmQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

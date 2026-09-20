@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.sudabang.app-mergeDebugResources-20:/values-watch-v21/values-watch-v21.xml",
+            "outputFile": "com.sudabang.app-mergeDebugResources-25:/values-watch-v21/values-watch-v21.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\ree12\\.gradle\\caches\\transforms-3\\048def187e9699c0978107a2e8f89df9\\transformed\\appcompat-1.6.1\\res\\values-watch-v21\\values-watch-v21.xml",
+                    "source": "C:\\Users\\ree12\\.gradle\\caches\\transforms-3\\960c5bcf678b002aedd48d4f0e6798e8\\transformed\\appcompat-1.6.1\\res\\values-watch-v21\\values-watch-v21.xml",
                     "from": {
                         "startLines": "2,6,10",
                         "startColumns": "4,4,4",

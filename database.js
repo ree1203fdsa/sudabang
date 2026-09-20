@@ -175,10 +175,19 @@ let db = null;
 let saveInterval = null;
 
 async function initDatabase() {
+  let wasmBinary;
   const wasmPath = path.join(__dirname, 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
-  const SQL = await initSqlJs({
-    locateFile: () => wasmPath
-  });
+  try {
+    wasmBinary = fs.readFileSync(wasmPath);
+  } catch (e) {
+    console.error('[DB] WASM 파일 읽기 실패:', wasmPath, e.message);
+  }
+
+  const sqlOptions = wasmBinary
+    ? { wasmBinary }
+    : { locateFile: () => wasmPath };
+
+  const SQL = await initSqlJs(sqlOptions);
 
   const sqlDb = new SQL.Database();
   db = new BetterSqlite3Compat(sqlDb);
