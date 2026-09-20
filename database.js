@@ -3,7 +3,7 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 
-const FIREBASE_URL = 'https://goatmxj-default-rtdb.asia-southeast1.firebasedatabase.app';
+const FIREBASE_URL = 'https://test-44d52-default-rtdb.asia-southeast1.firebasedatabase.app';
 const DB_PATH = process.env.VERCEL ? '/tmp/sudabang.db' : path.join(__dirname, 'sudabang.db');
 
 class BetterSqlite3Compat {
