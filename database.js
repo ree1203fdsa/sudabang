@@ -6,6 +6,17 @@ const path = require('path');
 const FIREBASE_URL = 'https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app';
 const DB_PATH = process.env.VERCEL ? '/tmp/sudabang.db' : path.join(__dirname, 'sudabang.db');
 
+const ALL_TABLES = [
+  'users', 'teachers', 'students', 'school_groups', 'school_group_members',
+  'attendance_school', 'school_announcements', 'school_albums', 'album_photos', 'student_warnings',
+  'friends', 'blocks', 'posts', 'post_hearts', 'comments', 'comment_likes',
+  'chat_rooms', 'chat_room_members', 'messages', 'message_reads',
+  'dm_rooms', 'dm_messages', 'attendance', 'coin_transactions',
+  'shop_items', 'user_inventory', 'notifications', 'reports', 'admin_logs',
+  'heart_rewards', 'attendance_rewards', 'teacher_chat_rooms', 'teacher_messages',
+  'polls', 'poll_options', 'poll_votes'
+];
+
 class BetterSqlite3Compat {
   constructor(sqlDb) {
     this._db = sqlDb;
@@ -71,19 +82,45 @@ class BetterSqlite3Compat {
   }
 }
 
+function getTableColumns(db, tableName) {
+  const results = db._db.exec(`PRAGMA table_info(${tableName})`);
+  if (!results.length) return [];
+  return results[0].values.map(row => row[1]);
+}
+
+function getAllRows(db, tableName) {
+  try {
+    return db.prepare(`SELECT * FROM ${tableName}`).all();
+  } catch (e) {
+    return [];
+  }
+}
+
 async function saveToFirebase(db) {
   if (!db._dirty) return;
   try {
-    const data = db._db.export();
-    const base64 = Buffer.from(data).toString('base64');
-    const res = await fetch(`${FIREBASE_URL}/database.json`, {
+    const payload = {};
+    for (const table of ALL_TABLES) {
+      const rows = getAllRows(db, table);
+      if (rows.length > 0) {
+        payload[table] = {};
+        for (const row of rows) {
+          payload[table][String(row.id)] = row;
+        }
+      } else {
+        payload[table] = null;
+      }
+    }
+    payload._meta = { updatedAt: new Date().toISOString(), tableCount: ALL_TABLES.length };
+
+    const res = await fetch(`${FIREBASE_URL}/sudabang.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ backup: base64, updatedAt: new Date().toISOString() })
+      body: JSON.stringify(payload)
     });
     if (res.ok) {
       db._dirty = false;
-      console.log('[Firebase] 데이터베이스 저장 완료');
+      console.log('[Firebase] 테이블별 데이터 저장 완료');
     } else {
       console.error('[Firebase] 저장 실패:', res.status);
     }
@@ -95,18 +132,42 @@ async function saveToFirebase(db) {
 
 async function loadFromFirebase() {
   try {
-    const res = await fetch(`${FIREBASE_URL}/database/backup.json`);
+    const res = await fetch(`${FIREBASE_URL}/sudabang.json`);
     if (res.ok) {
       const data = await res.json();
-      if (data && typeof data === 'string' && data.length > 100) {
-        console.log('[Firebase] 데이터베이스 로드 완료');
-        return Buffer.from(data, 'base64');
+      if (data && typeof data === 'object' && data._meta) {
+        console.log('[Firebase] 테이블별 데이터 로드 완료');
+        return data;
       }
     }
   } catch (e) {
     console.error('[Firebase] 로드 실패:', e.message);
   }
   return null;
+}
+
+function insertRowsFromFirebase(db, tableName, tableData) {
+  if (!tableData || typeof tableData !== 'object') return;
+  const rows = Object.values(tableData);
+  if (rows.length === 0) return;
+
+  const columns = Object.keys(rows[0]);
+  const placeholders = columns.map(() => '?').join(', ');
+  const colNames = columns.join(', ');
+
+  for (const row of rows) {
+    try {
+      const vals = columns.map(c => row[c] === undefined ? null : row[c]);
+      db._db.run(`INSERT OR REPLACE INTO ${tableName} (${colNames}) VALUES (${placeholders})`, vals);
+    } catch (e) {}
+  }
+
+  try {
+    const maxId = rows.reduce((max, r) => Math.max(max, r.id || 0), 0);
+    if (maxId > 0) {
+      db._db.run(`UPDATE sqlite_sequence SET seq = ${maxId} WHERE name = '${tableName}'`);
+    }
+  } catch (e) {}
 }
 
 let db = null;
@@ -118,21 +179,11 @@ async function initDatabase() {
     locateFile: () => wasmPath
   });
 
-  let sqlDb;
-  const cloudData = await loadFromFirebase();
-  if (cloudData) {
-    sqlDb = new SQL.Database(cloudData);
-  } else if (fs.existsSync(DB_PATH)) {
-    const fileBuffer = fs.readFileSync(DB_PATH);
-    sqlDb = new SQL.Database(fileBuffer);
-  } else {
-    sqlDb = new SQL.Database();
-  }
-
+  const sqlDb = new SQL.Database();
   db = new BetterSqlite3Compat(sqlDb);
 
   db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  db.pragma('foreign_keys = OFF');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -538,6 +589,16 @@ async function initDatabase() {
     UNIQUE(poll_id, user_id)
   )`);
 
+  const firebaseData = await loadFromFirebase();
+  if (firebaseData) {
+    for (const table of ALL_TABLES) {
+      if (firebaseData[table]) {
+        insertRowsFromFirebase(db, table, firebaseData[table]);
+      }
+    }
+    console.log('[Firebase] 모든 테이블 데이터 복원 완료');
+  }
+
   const adminPassword = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin1234', 10);
   const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get('ree1203');
   if (!adminExists) {
@@ -582,6 +643,8 @@ async function initDatabase() {
       `).run(admin.id);
     }
   }
+
+  db.pragma('foreign_keys = ON');
 
   db._dirty = true;
   await saveToFirebase(db);

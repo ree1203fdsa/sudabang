@@ -34,7 +34,10 @@
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; npm install mongodb)",
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; if \\(Test-Path \"sudabang.db\"\\) { Remove-Item \"sudabang.db\" -Force; Write-Output \"로컬 DB 삭제 완료\" } else { Write-Output \"로컬 DB 없음\" })",
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; Remove-Item \"sudabang.db\" -Force -ErrorAction SilentlyContinue; & \"C:\\\\Program Files\\\\nodejs\\\\node.exe\" server.js)",
-      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git add -A; git status)"
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git add -A; git status)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git push origin master)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; & curl.exe -s -X DELETE \"https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app/.json\")",
+      "PowerShell(& curl.exe -s \"https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app/sudabang/users.json\")"
     ]
   }
 }
