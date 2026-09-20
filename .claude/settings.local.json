@@ -37,7 +37,8 @@
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git add -A; git status)",
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git push origin master)",
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; & curl.exe -s -X DELETE \"https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app/.json\")",
-      "PowerShell(& curl.exe -s \"https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app/sudabang/users.json\")"
+      "PowerShell(& curl.exe -s \"https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app/sudabang/users.json\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue })"
     ]
   }
 }

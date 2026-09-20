@@ -14,7 +14,7 @@ const ALL_TABLES = [
   'dm_rooms', 'dm_messages', 'attendance', 'coin_transactions',
   'shop_items', 'user_inventory', 'notifications', 'reports', 'admin_logs',
   'heart_rewards', 'attendance_rewards', 'teacher_chat_rooms', 'teacher_messages',
-  'polls', 'poll_options', 'poll_votes'
+  'polls', 'poll_options', 'poll_votes', 'fcm_tokens'
 ];
 
 class BetterSqlite3Compat {
@@ -148,10 +148,11 @@ async function loadFromFirebase() {
 
 function insertRowsFromFirebase(db, tableName, tableData) {
   if (!tableData || typeof tableData !== 'object') return;
-  const rows = Object.values(tableData);
+  const rows = Object.values(tableData).filter(r => r && typeof r === 'object');
   if (rows.length === 0) return;
 
   const columns = Object.keys(rows[0]);
+  if (columns.length === 0) return;
   const placeholders = columns.map(() => '?').join(', ');
   const colNames = columns.join(', ');
 
@@ -587,6 +588,15 @@ async function initDatabase() {
     FOREIGN KEY (option_id) REFERENCES poll_options(id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     UNIQUE(poll_id, user_id)
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS fcm_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, token)
   )`);
 
   const firebaseData = await loadFromFirebase();

@@ -17,6 +17,7 @@ const App = {
         this.connectSocket();
         this.render();
         this.loadNotifCount();
+        this.registerFCMToken();
       } catch (e) {
         this.token = null;
         localStorage.removeItem('token');
@@ -263,6 +264,7 @@ const App = {
       this.connectSocket();
       this.render();
       this.loadNotifCount();
+      this.registerFCMToken();
     } catch (e) {
       const alert = document.getElementById('auth-alert');
       if (alert) alert.innerHTML = `<div class="auth-alert"><i class="fas fa-exclamation-circle"></i> ${this.escapeHtml(e.message)}</div>`;
@@ -401,6 +403,20 @@ const App = {
     };
 
     if (pages[page]) pages[page]();
+  },
+
+  async registerFCMToken() {
+    try {
+      let fcmToken = '';
+      if (window.AndroidBridge && window.AndroidBridge.getFCMToken) {
+        fcmToken = window.AndroidBridge.getFCMToken();
+      }
+      if (fcmToken) {
+        await this.api('/api/fcm/register', {
+          method: 'POST', body: { token: fcmToken }
+        });
+      }
+    } catch (e) {}
   },
 
   async loadNotifCount() {

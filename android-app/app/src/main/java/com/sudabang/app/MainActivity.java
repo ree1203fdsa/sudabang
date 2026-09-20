@@ -30,8 +30,17 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.content.SharedPreferences;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 public class MainActivity extends AppCompatActivity {
     private WebView webView;
@@ -77,11 +86,34 @@ public class MainActivity extends AppCompatActivity {
         setupWebView();
         setupSwipeRefresh();
 
+        requestNotificationPermission();
+        initFCM();
+
         if (isNetworkAvailable()) {
             webView.loadUrl(SERVER_URL);
         } else {
             webView.loadUrl("file:///android_asset/web/index.html");
         }
+    }
+
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1002);
+            }
+        }
+    }
+
+    private void initFCM() {
+        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                String token = task.getResult();
+                SharedPreferences prefs = getSharedPreferences("sudabang", MODE_PRIVATE);
+                prefs.edit().putString("fcm_token", token).apply();
+            }
+        });
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -107,6 +139,14 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         webView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
+
+        webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public String getFCMToken() {
+                SharedPreferences prefs = getSharedPreferences("sudabang", MODE_PRIVATE);
+                return prefs.getString("fcm_token", "");
+            }
+        }, "AndroidBridge");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override

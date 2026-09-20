@@ -159,12 +159,36 @@ function addCoins(userId, amount, reason) {
   }
 }
 
+// FCM 푸시 전송 함수
+async function sendPushNotification(userId, title, body, link = '') {
+  const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY;
+  if (!FCM_SERVER_KEY) return;
+  try {
+    const tokens = db.prepare('SELECT token FROM fcm_tokens WHERE user_id = ?').all(userId);
+    for (const row of tokens) {
+      fetch('https://fcm.googleapis.com/fcm/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `key=${FCM_SERVER_KEY}`
+        },
+        body: JSON.stringify({
+          to: row.token,
+          notification: { title, body, sound: 'default' },
+          data: { title, body, link }
+        })
+      }).catch(() => {});
+    }
+  } catch (e) {}
+}
+
 // 알림 생성 함수
 function createNotification(userId, type, title, message, link = '') {
   db.prepare('INSERT INTO notifications (user_id, type, title, message, link) VALUES (?, ?, ?, ?, ?)').run(
     userId, type, title, message, link
   );
   io.to(`user_${userId}`).emit('notification', { type, title, message, link });
+  sendPushNotification(userId, title, message, link);
 }
 
 // ==================== AUTH API ====================
@@ -262,6 +286,33 @@ app.get('/api/auth/me', auth, (req, res) => {
     userData.teacher = teacher;
   }
   res.json({ user: userData });
+});
+
+// FCM 토큰 등록
+app.post('/api/fcm/register', auth, (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: '토큰이 필요합니다.' });
+    db.prepare('INSERT OR IGNORE INTO fcm_tokens (user_id, token) VALUES (?, ?)').run(req.user.id, token);
+    res.json({ message: 'FCM 토큰 등록 완료' });
+  } catch (e) {
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// FCM 토큰 삭제 (로그아웃 시)
+app.post('/api/fcm/unregister', auth, (req, res) => {
+  try {
+    const { token } = req.body;
+    if (token) {
+      db.prepare('DELETE FROM fcm_tokens WHERE user_id = ? AND token = ?').run(req.user.id, token);
+    } else {
+      db.prepare('DELETE FROM fcm_tokens WHERE user_id = ?').run(req.user.id);
+    }
+    res.json({ message: 'FCM 토큰 삭제 완료' });
+  } catch (e) {
+    res.status(500).json({ error: '서버 오류' });
+  }
 });
 
 // ==================== USER / PROFILE API ====================
