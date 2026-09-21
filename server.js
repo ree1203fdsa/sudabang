@@ -181,7 +181,7 @@ function createNotification(userId, type, title, message, link = '') {
 
 app.post('/api/auth/register', upload.single('profileImage'), (req, res) => {
   try {
-    const { username, password, nickname, role, teacherCode } = req.body;
+    const { username, password, nickname, role, teacherCode, referralCode } = req.body;
 
     if (!username || !password || !nickname) {
       return res.status(400).json({ error: '모든 필드를 입력해주세요.' });
@@ -227,6 +227,21 @@ app.post('/api/auth/register', upload.single('profileImage'), (req, res) => {
     const publicRoom = db.prepare("SELECT id FROM chat_rooms WHERE type = 'public' LIMIT 1").get();
     if (publicRoom) {
       db.prepare('INSERT OR IGNORE INTO chat_room_members (room_id, user_id) VALUES (?, ?)').run(publicRoom.id, result.lastInsertRowid);
+    }
+
+    // 지인 추천 코드 처리
+    if (referralCode && referralCode.trim()) {
+      const refCode = db.prepare('SELECT * FROM referral_codes WHERE code = ? AND is_active = 1').get(referralCode.trim());
+      if (refCode && (refCode.max_uses === 0 || refCode.use_count < refCode.max_uses)) {
+        db.prepare('INSERT OR IGNORE INTO referral_uses (code_id, user_id) VALUES (?, ?)').run(refCode.id, result.lastInsertRowid);
+        db.prepare('UPDATE referral_codes SET use_count = use_count + 1 WHERE id = ?').run(refCode.id);
+        if (refCode.reward_coins > 0) {
+          db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(refCode.reward_coins, result.lastInsertRowid);
+          db.prepare('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)').run(
+            result.lastInsertRowid, refCode.reward_coins, 'referral', '지인 추천 보상'
+          );
+        }
+      }
     }
 
     res.json({ message: '회원가입이 완료되었습니다!' });
@@ -1222,6 +1237,33 @@ app.get('/api/teacher/chat-rooms/:id/messages', teacherAuth, (req, res) => {
   res.json({ messages });
 });
 
+// ==================== COUPON API ====================
+
+app.post('/api/coupons/redeem', auth, (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: '쿠폰 코드를 입력해주세요.' });
+    const coupon = db.prepare('SELECT * FROM coupons WHERE code = ? AND is_active = 1').get(code.trim());
+    if (!coupon) return res.status(400).json({ error: '유효하지 않은 쿠폰입니다.' });
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) return res.status(400).json({ error: '만료된 쿠폰입니다.' });
+    if (coupon.max_uses > 0 && coupon.use_count >= coupon.max_uses) return res.status(400).json({ error: '사용 횟수가 초과된 쿠폰입니다.' });
+    const used = db.prepare('SELECT id FROM coupon_uses WHERE coupon_id = ? AND user_id = ?').get(coupon.id, req.user.id);
+    if (used) return res.status(400).json({ error: '이미 사용한 쿠폰입니다.' });
+    db.prepare('INSERT INTO coupon_uses (coupon_id, user_id) VALUES (?, ?)').run(coupon.id, req.user.id);
+    db.prepare('UPDATE coupons SET use_count = use_count + 1 WHERE id = ?').run(coupon.id);
+    if (coupon.reward_coins > 0) {
+      db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(coupon.reward_coins, req.user.id);
+      db.prepare('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)').run(
+        req.user.id, coupon.reward_coins, 'coupon', `쿠폰 사용: ${coupon.description || coupon.code}`
+      );
+    }
+    const user = db.prepare('SELECT coins FROM users WHERE id = ?').get(req.user.id);
+    res.json({ message: `쿠폰이 적용되었습니다! ${coupon.reward_coins} 코인 지급!`, coins: user.coins });
+  } catch (e) {
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
 // ==================== ADMIN API ====================
 
 app.get('/api/admin/dashboard', adminAuth, (req, res) => {
@@ -1449,6 +1491,50 @@ app.post('/api/polls/:id/vote', auth, (req, res) => {
 
   const options = db.prepare('SELECT * FROM poll_options WHERE poll_id = ?').all(req.params.id);
   res.json({ message: '투표 완료!', options });
+});
+
+// ==================== ADMIN REFERRAL & COUPON API ====================
+
+app.get('/api/admin/referral-codes', adminAuth, (req, res) => {
+  const codes = db.prepare('SELECT * FROM referral_codes ORDER BY created_at DESC').all();
+  res.json({ codes });
+});
+
+app.post('/api/admin/referral-codes', adminAuth, (req, res) => {
+  const { code, description, rewardCoins, maxUses } = req.body;
+  if (!code) return res.status(400).json({ error: '코드를 입력해주세요.' });
+  const existing = db.prepare('SELECT id FROM referral_codes WHERE code = ?').get(code);
+  if (existing) return res.status(400).json({ error: '이미 존재하는 코드입니다.' });
+  db.prepare('INSERT INTO referral_codes (code, description, reward_coins, max_uses) VALUES (?, ?, ?, ?)').run(
+    code, description || '', rewardCoins || 0, maxUses || 0
+  );
+  res.json({ message: '추천 코드가 생성되었습니다.' });
+});
+
+app.delete('/api/admin/referral-codes/:id', adminAuth, (req, res) => {
+  db.prepare('UPDATE referral_codes SET is_active = 0 WHERE id = ?').run(req.params.id);
+  res.json({ message: '추천 코드가 비활성화되었습니다.' });
+});
+
+app.get('/api/admin/coupons', adminAuth, (req, res) => {
+  const coupons = db.prepare('SELECT * FROM coupons ORDER BY created_at DESC').all();
+  res.json({ coupons });
+});
+
+app.post('/api/admin/coupons', adminAuth, (req, res) => {
+  const { code, description, rewardCoins, maxUses, expiresAt } = req.body;
+  if (!code) return res.status(400).json({ error: '쿠폰 코드를 입력해주세요.' });
+  const existing = db.prepare('SELECT id FROM coupons WHERE code = ?').get(code);
+  if (existing) return res.status(400).json({ error: '이미 존재하는 쿠폰입니다.' });
+  db.prepare('INSERT INTO coupons (code, description, reward_coins, max_uses, expires_at) VALUES (?, ?, ?, ?, ?)').run(
+    code, description || '', rewardCoins || 0, maxUses || 0, expiresAt || null
+  );
+  res.json({ message: '쿠폰이 생성되었습니다.' });
+});
+
+app.delete('/api/admin/coupons/:id', adminAuth, (req, res) => {
+  db.prepare('UPDATE coupons SET is_active = 0 WHERE id = ?').run(req.params.id);
+  res.json({ message: '쿠폰이 비활성화되었습니다.' });
 });
 
 // ==================== SOCKET.IO ====================

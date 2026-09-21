@@ -14,7 +14,8 @@ const ALL_TABLES = [
   'dm_rooms', 'dm_messages', 'attendance', 'coin_transactions',
   'shop_items', 'user_inventory', 'notifications', 'reports', 'admin_logs',
   'heart_rewards', 'attendance_rewards', 'teacher_chat_rooms', 'teacher_messages',
-  'polls', 'poll_options', 'poll_votes', 'fcm_tokens'
+  'polls', 'poll_options', 'poll_votes', 'fcm_tokens',
+  'referral_codes', 'referral_uses', 'coupons', 'coupon_uses'
 ];
 
 class BetterSqlite3Compat {
@@ -67,6 +68,9 @@ class BetterSqlite3Compat {
 
   exec(sql) {
     this._db.run(sql);
+    if (/^\s*(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)/i.test(sql)) {
+      this._dirty = true;
+    }
   }
 
   pragma(str) {
@@ -608,6 +612,49 @@ async function initDatabase() {
     UNIQUE(user_id, token)
   )`);
 
+  db.exec(`CREATE TABLE IF NOT EXISTS referral_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE NOT NULL,
+    description TEXT DEFAULT '',
+    reward_coins INTEGER DEFAULT 0,
+    max_uses INTEGER DEFAULT 0,
+    use_count INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS referral_uses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (code_id) REFERENCES referral_codes(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(code_id, user_id)
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS coupons (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE NOT NULL,
+    description TEXT DEFAULT '',
+    reward_coins INTEGER DEFAULT 0,
+    max_uses INTEGER DEFAULT 0,
+    use_count INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    expires_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS coupon_uses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    coupon_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (coupon_id) REFERENCES coupons(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(coupon_id, user_id)
+  )`);
+
   const firebaseData = await loadFromFirebase();
   if (firebaseData) {
     for (const table of ALL_TABLES) {
@@ -670,7 +717,7 @@ async function initDatabase() {
 
   saveInterval = setInterval(() => {
     saveToFirebase(db).catch(() => {});
-  }, 30000);
+  }, 10000);
 
   process.on('SIGINT', async () => {
     await saveToFirebase(db);

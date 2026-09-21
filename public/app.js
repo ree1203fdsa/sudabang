@@ -223,6 +223,13 @@ const App = {
               <i class="fas fa-smile auth-input-icon"></i>
               <input type="text" id="reg-nickname" class="auth-input" placeholder="닉네임 (2~12자)">
             </div>
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+              <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">추가정보</div>
+              <div class="auth-input-group">
+                <i class="fas fa-user-friends auth-input-icon"></i>
+                <input type="text" id="reg-referral" class="auth-input" placeholder="지인 추천 코드 (선택사항)">
+              </div>
+            </div>
             <button class="auth-btn auth-btn-primary" onclick="App.register()">가입하기</button>
             <button class="auth-btn auth-btn-outline" onclick="App.renderAuth('login')">로그인으로 돌아가기</button>
           </div>
@@ -279,6 +286,8 @@ const App = {
     formData.append('role', document.getElementById('reg-role').value);
     const teacherCode = document.getElementById('reg-teacher-code');
     if (teacherCode) formData.append('teacherCode', teacherCode.value);
+    const referralInput = document.getElementById('reg-referral');
+    if (referralInput && referralInput.value.trim()) formData.append('referralCode', referralInput.value.trim());
     const fileInput = document.getElementById('reg-profile');
     if (fileInput && fileInput.files[0]) formData.append('profileImage', fileInput.files[0]);
 
@@ -1637,6 +1646,10 @@ const App = {
           <div class="settings-item-left"><i class="fas fa-${this.user.theme === 'dark' ? 'moon' : 'sun'}"></i><span class="settings-item-label">${this.user.theme === 'dark' ? '다크 모드' : '라이트 모드'}</span></div>
           <div class="toggle ${this.user.theme === 'dark' ? 'active' : ''}" onclick="App.toggleTheme()"></div>
         </div>
+        <div class="settings-item" onclick="App.showCouponRedeem()">
+          <div class="settings-item-left"><i class="fas fa-ticket-alt" style="color:#FF6B9D"></i><span class="settings-item-label">쿠폰 등록</span></div>
+          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
         <div class="settings-item" onclick="App.showBlockList()">
           <div class="settings-item-left"><i class="fas fa-ban"></i><span class="settings-item-label">차단 목록</span></div>
           <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
@@ -1742,6 +1755,25 @@ const App = {
     } catch (e) { this.showToast(e.message, 'error'); }
   },
 
+  showCouponRedeem() {
+    this.showModal('쿠폰 등록', `
+      <div class="form-group">
+        <label class="form-label">쿠폰 코드</label>
+        <input type="text" class="form-input" id="coupon-code" placeholder="쿠폰 코드를 입력하세요">
+      </div>
+    `, async () => {
+      const code = document.getElementById('coupon-code').value;
+      if (!code.trim()) return this.showToast('쿠폰 코드를 입력해주세요.', 'error');
+      try {
+        const data = await this.api('/api/coupons/redeem', { method: 'POST', body: { code: code.trim() } });
+        this.user.coins = data.coins;
+        this.closeModal();
+        this.showToast(data.message, 'success');
+        this.renderSettings();
+      } catch (e) { this.showToast(e.message, 'error'); }
+    });
+  },
+
   async deleteAccount() {
     const pw = prompt('회원 탈퇴를 위해 비밀번호를 입력해주세요.');
     if (!pw) return;
@@ -1837,6 +1869,8 @@ const App = {
         <div class="tab" onclick="App.loadAdminTab('rooms', this)">수다방</div>
         <div class="tab" onclick="App.loadAdminTab('reports', this)">신고</div>
         <div class="tab" onclick="App.loadAdminTab('notices', this)">공지</div>
+        <div class="tab" onclick="App.loadAdminTab('referrals', this)">추천코드</div>
+        <div class="tab" onclick="App.loadAdminTab('coupons', this)">쿠폰</div>
         <div class="tab" onclick="App.loadAdminTab('logs', this)">기록</div>
       </div>
       <div id="admin-content"></div>
@@ -1942,6 +1976,64 @@ const App = {
           <button class="btn btn-primary btn-full" onclick="App.createNotice()">등록</button>
         </div>
       `;
+    } else if (tab === 'referrals') {
+      try {
+        const data = await this.api('/api/admin/referral-codes');
+        container.innerHTML = `
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title" style="margin-bottom:12px">추천 코드 생성</div>
+            <div class="form-group"><label class="form-label">코드</label><input type="text" class="form-input" id="ref-code" placeholder="추천 코드"></div>
+            <div class="form-group"><label class="form-label">설명</label><input type="text" class="form-input" id="ref-desc" placeholder="설명 (선택)"></div>
+            <div style="display:flex;gap:8px">
+              <div class="form-group" style="flex:1"><label class="form-label">보상 코인</label><input type="number" class="form-input" id="ref-coins" value="0"></div>
+              <div class="form-group" style="flex:1"><label class="form-label">최대 사용 (0=무제한)</label><input type="number" class="form-input" id="ref-max" value="0"></div>
+            </div>
+            <button class="btn btn-primary btn-full" onclick="App.createReferralCode()">생성</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="admin-table">
+              <thead><tr><th>코드</th><th>설명</th><th>보상</th><th>사용</th><th>상태</th><th>작업</th></tr></thead>
+              <tbody>${data.codes.map(c => `<tr>
+                <td><strong>${this.escapeHtml(c.code)}</strong></td>
+                <td>${this.escapeHtml(c.description || '-')}</td>
+                <td>${c.reward_coins}코인</td>
+                <td>${c.use_count}${c.max_uses > 0 ? '/' + c.max_uses : ''}</td>
+                <td>${c.is_active ? '<span class="badge badge-user">활성</span>' : '<span class="badge badge-banned">비활성</span>'}</td>
+                <td>${c.is_active ? `<button class="btn btn-small btn-danger" onclick="App.deleteReferralCode(${c.id})">비활성화</button>` : ''}</td>
+              </tr>`).join('')}</tbody>
+            </table>
+          </div>`;
+      } catch (e) {}
+    } else if (tab === 'coupons') {
+      try {
+        const data = await this.api('/api/admin/coupons');
+        container.innerHTML = `
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title" style="margin-bottom:12px">쿠폰 생성</div>
+            <div class="form-group"><label class="form-label">쿠폰 코드</label><input type="text" class="form-input" id="coupon-new-code" placeholder="쿠폰 코드"></div>
+            <div class="form-group"><label class="form-label">설명</label><input type="text" class="form-input" id="coupon-new-desc" placeholder="설명 (선택)"></div>
+            <div style="display:flex;gap:8px">
+              <div class="form-group" style="flex:1"><label class="form-label">보상 코인</label><input type="number" class="form-input" id="coupon-new-coins" value="0"></div>
+              <div class="form-group" style="flex:1"><label class="form-label">최대 사용 (0=무제한)</label><input type="number" class="form-input" id="coupon-new-max" value="0"></div>
+            </div>
+            <div class="form-group"><label class="form-label">만료일 (선택)</label><input type="date" class="form-input" id="coupon-new-expires"></div>
+            <button class="btn btn-primary btn-full" onclick="App.createCoupon()">생성</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="admin-table">
+              <thead><tr><th>코드</th><th>설명</th><th>보상</th><th>사용</th><th>만료</th><th>상태</th><th>작업</th></tr></thead>
+              <tbody>${data.coupons.map(c => `<tr>
+                <td><strong>${this.escapeHtml(c.code)}</strong></td>
+                <td>${this.escapeHtml(c.description || '-')}</td>
+                <td>${c.reward_coins}코인</td>
+                <td>${c.use_count}${c.max_uses > 0 ? '/' + c.max_uses : ''}</td>
+                <td>${c.expires_at ? c.expires_at.split('T')[0] : '-'}</td>
+                <td>${c.is_active ? '<span class="badge badge-user">활성</span>' : '<span class="badge badge-banned">비활성</span>'}</td>
+                <td>${c.is_active ? `<button class="btn btn-small btn-danger" onclick="App.deleteCoupon(${c.id})">비활성화</button>` : ''}</td>
+              </tr>`).join('')}</tbody>
+            </table>
+          </div>`;
+      } catch (e) {}
     } else if (tab === 'logs') {
       try {
         const data = await this.api('/api/admin/logs');
@@ -2059,6 +2151,51 @@ const App = {
       this.showToast('공지사항이 등록되었습니다!', 'success');
       document.getElementById('notice-title').value = '';
       document.getElementById('notice-content').value = '';
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  async createReferralCode() {
+    try {
+      await this.api('/api/admin/referral-codes', { method: 'POST', body: {
+        code: document.getElementById('ref-code').value,
+        description: document.getElementById('ref-desc').value,
+        rewardCoins: parseInt(document.getElementById('ref-coins').value) || 0,
+        maxUses: parseInt(document.getElementById('ref-max').value) || 0
+      }});
+      this.showToast('추천 코드가 생성되었습니다!', 'success');
+      this.loadAdminTab('referrals', document.querySelector('.tab.active'));
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  async deleteReferralCode(id) {
+    if (!confirm('이 추천 코드를 비활성화하시겠습니까?')) return;
+    try {
+      await this.api(`/api/admin/referral-codes/${id}`, { method: 'DELETE' });
+      this.showToast('비활성화되었습니다.', 'success');
+      this.loadAdminTab('referrals', document.querySelector('.tab.active'));
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  async createCoupon() {
+    try {
+      await this.api('/api/admin/coupons', { method: 'POST', body: {
+        code: document.getElementById('coupon-new-code').value,
+        description: document.getElementById('coupon-new-desc').value,
+        rewardCoins: parseInt(document.getElementById('coupon-new-coins').value) || 0,
+        maxUses: parseInt(document.getElementById('coupon-new-max').value) || 0,
+        expiresAt: document.getElementById('coupon-new-expires').value || null
+      }});
+      this.showToast('쿠폰이 생성되었습니다!', 'success');
+      this.loadAdminTab('coupons', document.querySelector('.tab.active'));
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  async deleteCoupon(id) {
+    if (!confirm('이 쿠폰을 비활성화하시겠습니까?')) return;
+    try {
+      await this.api(`/api/admin/coupons/${id}`, { method: 'DELETE' });
+      this.showToast('비활성화되었습니다.', 'success');
+      this.loadAdminTab('coupons', document.querySelector('.tab.active'));
     } catch (e) { this.showToast(e.message, 'error'); }
   },
 
