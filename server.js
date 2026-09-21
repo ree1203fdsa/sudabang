@@ -78,18 +78,16 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// POST/PUT/DELETE 요청 시 응답 전에 Firebase 저장
+// 모든 API 요청 시 응답 전에 Firebase 저장
 app.use((req, res, next) => {
-  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
-    const origJson = res.json.bind(res);
-    res.json = function(data) {
-      if (db && db._dirty) {
-        saveToFirebase(db).then(() => origJson(data)).catch(() => origJson(data));
-      } else {
-        origJson(data);
-      }
-    };
-  }
+  const origJson = res.json.bind(res);
+  res.json = function(data) {
+    if (db && db._dirty) {
+      saveToFirebase(db).then(() => origJson(data)).catch(() => origJson(data));
+    } else {
+      origJson(data);
+    }
+  };
   next();
 });
 
@@ -1698,6 +1696,7 @@ io.on('connection', (socket) => {
   const userId = socket.user.id;
   onlineUsers.set(userId, socket.id);
   db.prepare('UPDATE users SET is_online = 1 WHERE id = ?').run(userId);
+  saveToFirebase(db).catch(() => {});
   socket.join(`user_${userId}`);
 
   // 실시간 채팅 참여
@@ -1750,6 +1749,7 @@ io.on('connection', (socket) => {
         } else {
           socket.emit('warning', { message: '부적절한 언어 사용이 감지되었습니다. 주의해주세요!', count: warningCount });
         }
+        saveToFirebase(db).catch(() => {});
         return;
       }
     }
@@ -1775,6 +1775,7 @@ io.on('connection', (socket) => {
     };
 
     io.to(`room_${data.roomId}`).emit('chatMessage', message);
+    saveToFirebase(db).catch(() => {});
   });
 
   socket.on('deleteMessage', (data) => {
@@ -1782,6 +1783,7 @@ io.on('connection', (socket) => {
     if (msg && (msg.user_id === userId || socket.user.role === 'admin')) {
       db.prepare('UPDATE messages SET is_deleted = 1 WHERE id = ?').run(data.messageId);
       io.to(`room_${msg.room_id}`).emit('messageDeleted', { messageId: data.messageId });
+      saveToFirebase(db).catch(() => {});
     }
   });
 
@@ -1814,6 +1816,7 @@ io.on('connection', (socket) => {
     };
 
     io.to(`dm_${data.roomId}`).emit('dmMessage', message);
+    saveToFirebase(db).catch(() => {});
 
     // 상대방에게 알림
     const room = db.prepare('SELECT * FROM dm_rooms WHERE id = ?').get(data.roomId);
@@ -1826,6 +1829,7 @@ io.on('connection', (socket) => {
   socket.on('dmRead', (data) => {
     db.prepare('UPDATE dm_messages SET is_read = 1 WHERE room_id = ? AND sender_id != ? AND is_read = 0').run(data.roomId, userId);
     io.to(`dm_${data.roomId}`).emit('dmRead', { roomId: data.roomId, userId });
+    saveToFirebase(db).catch(() => {});
   });
 
   // 선생님 채팅
@@ -1857,6 +1861,7 @@ io.on('connection', (socket) => {
     };
 
     io.to(`teacher_room_${data.roomId}`).emit('teacherMessage', message);
+    saveToFirebase(db).catch(() => {});
   });
 
   // 타이핑 표시
@@ -1871,6 +1876,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     onlineUsers.delete(userId);
     db.prepare('UPDATE users SET is_online = 0 WHERE id = ?').run(userId);
+    saveToFirebase(db).catch(() => {});
   });
 });
 
