@@ -791,4 +791,4 @@ function getDb() {
   return db;
 }
 
-module.exports = { getDb, initDatabase };
+module.exports = { getDb, initDatabase, saveToFirebase };

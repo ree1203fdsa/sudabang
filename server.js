@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const fs = require('fs');
-const { getDb, initDatabase } = require('./database');
+const { getDb, initDatabase, saveToFirebase } = require('./database');
 
 const app = express();
 const server = http.createServer(app);
@@ -74,6 +74,20 @@ app.use(async (req, res, next) => {
       dbReady = null;
       return res.status(500).json({ error: '데이터베이스 초기화 실패: ' + e.message });
     }
+  }
+  next();
+});
+
+// POST/PUT/DELETE 요청 후 자동 Firebase 저장
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    const origJson = res.json.bind(res);
+    res.json = function(data) {
+      origJson(data);
+      if (db && db._dirty) {
+        saveToFirebase(db).catch(() => {});
+      }
+    };
   }
   next();
 });
