@@ -73,7 +73,9 @@
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; node -e \"fetch\\('https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app/sudabang/users.json'\\).then\\(r=>r.text\\(\\)\\).then\\(d=>console.log\\(d.substring\\(0,300\\)\\)\\).catch\\(e=>console.error\\(e.message\\)\\)\")",
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; node -e \"fetch\\('https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app/sudabang/users.json'\\).then\\(r=>r.json\\(\\)\\).then\\(d=>{if\\(d\\){Object.keys\\(d\\).forEach\\(k=>{if\\(d[k]\\)console.log\\(k,d[k].username,d[k].nickname\\)}\\)}else console.log\\('null'\\)}\\).catch\\(e=>console.error\\(e\\)\\)\")",
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Start-Sleep -Seconds 2; node -e \"fetch\\('https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app/sudabang/users.json'\\).then\\(r=>r.json\\(\\)\\).then\\(d=>{Object.keys\\(d\\).forEach\\(k=>{if\\(d[k]\\)console.log\\(k,d[k].username,d[k].nickname\\)}\\)}\\).catch\\(e=>console.error\\(e\\)\\)\")",
-      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; cd \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git add -A; git status)"
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; cd \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git add -A; git status)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; cd \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git push origin master)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; \\(Get-Content \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\\\\public\\\\app.js\" | Measure-Object -Line\\).Lines)"
     ]
   }
 }

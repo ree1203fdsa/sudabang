@@ -411,6 +411,12 @@ const App = {
       'student-dashboard': () => this.renderStudentDashboard(),
       missions: () => this.renderMissions(),
       achievements: () => this.renderAchievements(),
+      minigame: () => this.renderMinigame(),
+      gallery: () => this.renderGallery(),
+      'level-rewards': () => this.renderLevelRewards(),
+      titles: () => this.renderTitles(),
+      'my-reports': () => this.renderMyReports(),
+      polls: () => this.renderPolls(),
     };
 
     if (pages[page]) pages[page]();
@@ -529,6 +535,9 @@ const App = {
         </div>
       </div>
 
+      <!-- Event Banners -->
+      <div id="home-banners"></div>
+
       <!-- Notices -->
       <div id="home-notices"></div>
 
@@ -548,9 +557,25 @@ const App = {
           <div class="stat-icon" style="background:#FFD70020;color:#FFD700"><i class="fas fa-trophy"></i></div>
           <div class="stat-label">랭킹</div>
         </div>
+        <div class="stat-card" onclick="App.navigate('minigame')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#FF6B9D20;color:#FF6B9D"><i class="fas fa-gamepad"></i></div>
+          <div class="stat-label">미니게임</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('gallery')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#E040FB20;color:#E040FB"><i class="fas fa-images"></i></div>
+          <div class="stat-label">갤러리</div>
+        </div>
         <div class="stat-card" onclick="App.navigate('attendance')" style="cursor:pointer">
           <div class="stat-icon" style="background:#2ED57320;color:var(--success)"><i class="fas fa-calendar-check"></i></div>
           <div class="stat-label">출석</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('level-rewards')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#FFA50220;color:var(--warning)"><i class="fas fa-gift"></i></div>
+          <div class="stat-label">레벨 보상</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('polls')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#1E90FF20;color:#1E90FF"><i class="fas fa-poll"></i></div>
+          <div class="stat-label">투표</div>
         </div>
         ${this.user.role === 'admin' ? `
         <div class="stat-card" onclick="App.navigate('admin')" style="cursor:pointer">
@@ -570,6 +595,23 @@ const App = {
       if (attData.checked) {
         const btn = document.getElementById('quick-attend-btn');
         if (btn) { btn.textContent = '완료 ✓'; btn.classList.add('done'); btn.disabled = true; }
+      }
+    } catch (e) {}
+
+    // Load event banners
+    try {
+      const bannerData = await this.api('/api/banners');
+      if (bannerData.banners.length > 0) {
+        document.getElementById('home-banners').innerHTML = `
+          <div style="overflow-x:auto;display:flex;gap:12px;padding:4px 0;margin-bottom:8px;scroll-snap-type:x mandatory">
+            ${bannerData.banners.map(b => `
+              <div style="min-width:85%;scroll-snap-align:start;background:linear-gradient(135deg,#6C63FF,#FF6B9D);border-radius:16px;padding:20px;color:white;cursor:${b.link ? 'pointer' : 'default'}" ${b.link ? `onclick="App.navigate('${b.link.replace(/^\//, '')}')"` : ''}>
+                <div style="font-size:18px;font-weight:800">${this.escapeHtml(b.title)}</div>
+                ${b.description ? `<div style="font-size:13px;opacity:0.9;margin-top:4px">${this.escapeHtml(b.description)}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
       }
     } catch (e) {}
 
@@ -1417,11 +1459,14 @@ const App = {
     const content = document.getElementById('page-content');
     content.innerHTML = `
       <div class="page-title"><i class="fas fa-trophy page-title-icon" style="color:#FFD700"></i> 랭킹</div>
-      <div class="tabs">
+      <div class="tabs" style="flex-wrap:wrap">
         <div class="tab active" onclick="App.loadRanking('hearts', this)">하트</div>
         <div class="tab" onclick="App.loadRanking('comments', this)">댓글</div>
         <div class="tab" onclick="App.loadRanking('views', this)">조회수</div>
-        <div class="tab" onclick="App.loadRanking('users', this)">사용자</div>
+        <div class="tab" onclick="App.loadRanking('users', this)">레벨</div>
+        <div class="tab" onclick="App.loadRanking('weekly-posts', this)">주간 글</div>
+        <div class="tab" onclick="App.loadRanking('weekly-hearts', this)">주간 하트</div>
+        <div class="tab" onclick="App.loadRanking('weekly-attendance', this)">출석왕</div>
       </div>
       <div class="card" id="ranking-list" style="padding:0 16px"></div>
     `;
@@ -1434,7 +1479,20 @@ const App = {
     const container = document.getElementById('ranking-list');
 
     try {
-      if (type === 'users') {
+      if (type.startsWith('weekly-')) {
+        const weeklyType = type.replace('weekly-', '');
+        const data = await this.api(`/api/ranking/weekly?type=${weeklyType}`);
+        const labelMap = { posts: '글', hearts: '하트', attendance: '출석' };
+        container.innerHTML = data.rankings && data.rankings.length ? data.rankings.map((u, i) => `
+          <div class="rank-item" onclick="App.renderProfile(${u.user_id || u.id})">
+            <div class="rank-number ${i < 3 ? 'rank-' + (i + 1) : ''}">${i + 1}</div>
+            <div class="rank-info">
+              <div class="rank-title">${this.escapeHtml(u.nickname)}</div>
+              <div class="rank-stats"><span>${labelMap[weeklyType] || weeklyType} ${u.count || u.score || 0}</span></div>
+            </div>
+          </div>
+        `).join('') : '<div class="empty-state"><p>이번 주 데이터가 없습니다</p></div>';
+      } else if (type === 'users') {
         const data = await this.api('/api/ranking/users');
         container.innerHTML = data.users.map((u, i) => `
           <div class="rank-item" onclick="App.renderProfile(${u.id})">
@@ -1523,6 +1581,7 @@ const App = {
         <div class="profile-header">
           <img class="profile-avatar-lg" src="${u.profile_image}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%236C63FF%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22 fill=%22white%22>👤</text></svg>'">
           <div class="profile-nickname">${this.escapeHtml(u.nickname)}</div>
+          ${u.title ? `<div style="color:#E040FB;font-size:13px;margin-top:2px"><i class="fas fa-crown"></i> ${this.escapeHtml(u.title)}</div>` : ''}
           <div class="profile-level-badge">Lv.${u.level} · ${u.role === 'admin' ? '관리자' : u.role === 'teacher' ? '선생님' : u.role === 'student' ? '학생' : '일반'}</div>
           ${u.bio ? `<div class="profile-bio">${this.escapeHtml(u.bio)}</div>` : ''}
           <div style="margin-top:12px;max-width:200px;margin-left:auto;margin-right:auto">
@@ -1594,6 +1653,405 @@ const App = {
     } catch (e) { content.innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
   },
 
+  // ==================== MINI GAMES ====================
+  async renderMinigame() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <div class="page-title"><i class="fas fa-gamepad page-title-icon" style="color:#FF6B9D"></i> 미니게임</div>
+      <div class="card" style="text-align:center;padding:20px">
+        <p style="margin-bottom:8px">보유 코인: <b id="mg-coins">${this.user.coins || 0}</b></p>
+        <div style="display:flex;gap:8px;margin-bottom:12px;justify-content:center">
+          <label><input type="radio" name="mg-bet" value="10" checked> 10</label>
+          <label><input type="radio" name="mg-bet" value="50"> 50</label>
+          <label><input type="radio" name="mg-bet" value="100"> 100</label>
+          <label><input type="radio" name="mg-bet" value="500"> 500</label>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+        <div class="card" style="text-align:center;padding:20px;cursor:pointer" onclick="App.playMinigame('roulette')">
+          <div style="font-size:40px;margin-bottom:8px">🎰</div>
+          <b>룰렛</b>
+          <p style="font-size:12px;color:var(--text-secondary)">최대 5배!</p>
+        </div>
+        <div class="card" style="text-align:center;padding:20px;cursor:pointer" onclick="App.playMinigame('rps')">
+          <div style="font-size:40px;margin-bottom:8px">✊</div>
+          <b>가위바위보</b>
+          <p style="font-size:12px;color:var(--text-secondary)">이기면 2배</p>
+        </div>
+        <div class="card" style="text-align:center;padding:20px;cursor:pointer" onclick="App.playMinigame('coinflip')">
+          <div style="font-size:40px;margin-bottom:8px">🪙</div>
+          <b>동전던지기</b>
+          <p style="font-size:12px;color:var(--text-secondary)">앞뒤 맞추기</p>
+        </div>
+      </div>
+      <div class="card" id="mg-result" style="display:none;text-align:center;padding:20px"></div>
+      <div class="page-title" style="font-size:16px;margin-top:16px"><i class="fas fa-history"></i> 최근 기록</div>
+      <div id="mg-history"></div>
+    `;
+    this.loadMinigameHistory();
+  },
+
+  async playMinigame(gameType) {
+    const bet = parseInt(document.querySelector('input[name="mg-bet"]:checked').value);
+    const resultDiv = document.getElementById('mg-result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<p>게임 중...</p>';
+
+    let body = { bet };
+    if (gameType === 'rps') {
+      const choices = ['rock', 'paper', 'scissors'];
+      const labels = ['✊ 바위', '✋ 보', '✌️ 가위'];
+      const pick = await new Promise(resolve => {
+        resultDiv.innerHTML = `<p>선택하세요!</p><div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
+          ${choices.map((c, i) => `<button class="btn" onclick="this.parentElement.dataset.pick='${c}';document.getElementById('mg-result').dataset.resolved='1'">${labels[i]}</button>`).join('')}
+        </div>`;
+        const check = setInterval(() => {
+          if (resultDiv.dataset.resolved) { clearInterval(check); resolve(resultDiv.querySelector('[data-pick]')?.dataset.pick || 'rock'); }
+        }, 100);
+      });
+      body.choice = pick;
+    } else if (gameType === 'coinflip') {
+      const pick = await new Promise(resolve => {
+        resultDiv.innerHTML = `<p>어느 면?</p><div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
+          <button class="btn" onclick="document.getElementById('mg-result').dataset.pick='heads';document.getElementById('mg-result').dataset.resolved='1'">앞면</button>
+          <button class="btn" onclick="document.getElementById('mg-result').dataset.pick='tails';document.getElementById('mg-result').dataset.resolved='1'">뒷면</button>
+        </div>`;
+        const check = setInterval(() => {
+          if (resultDiv.dataset.resolved) { clearInterval(check); resolve(resultDiv.dataset.pick || 'heads'); }
+        }, 100);
+      });
+      body.choice = pick;
+    }
+
+    delete resultDiv.dataset.resolved;
+    delete resultDiv.dataset.pick;
+
+    try {
+      const data = await this.api(`/api/minigame/${gameType}`, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
+      const won = data.reward > 0;
+      const emoji = won ? '🎉' : '😢';
+      let detail = '';
+      if (gameType === 'roulette') detail = `배율: x${data.result}`;
+      else if (gameType === 'rps') detail = `상대: ${data.computer_choice === 'rock' ? '✊' : data.computer_choice === 'paper' ? '✋' : '✌️'}`;
+      else if (gameType === 'coinflip') detail = `결과: ${data.coin_result === 'heads' ? '앞면' : '뒷면'}`;
+
+      resultDiv.innerHTML = `
+        <div style="font-size:48px">${emoji}</div>
+        <p style="font-size:18px;font-weight:bold;color:${won ? '#2ED573' : '#FF4757'}">${won ? '승리!' : '패배!'}</p>
+        <p>${detail}</p>
+        <p>${won ? '+' : ''}${data.reward} 코인</p>
+      `;
+      document.getElementById('mg-coins').textContent = data.new_balance;
+      this.user.coins = data.new_balance;
+      this.loadMinigameHistory();
+    } catch (e) {
+      resultDiv.innerHTML = `<p style="color:#FF4757">${e.message}</p>`;
+    }
+  },
+
+  async loadMinigameHistory() {
+    try {
+      const data = await this.api('/api/minigame/history');
+      const histDiv = document.getElementById('mg-history');
+      if (!histDiv) return;
+      const gameLabels = { roulette: '🎰 룰렛', rps: '✊ 가위바위보', coinflip: '🪙 동전' };
+      histDiv.innerHTML = data.records.length ? data.records.map(r => `
+        <div class="card" style="padding:12px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <b>${gameLabels[r.game_type] || r.game_type}</b>
+            <span style="color:var(--text-secondary);font-size:12px;margin-left:8px">${new Date(r.created_at).toLocaleDateString('ko')}</span>
+          </div>
+          <div>
+            <span style="color:var(--text-secondary)">배팅 ${r.bet_amount}</span>
+            <span style="margin-left:8px;font-weight:bold;color:${r.reward > 0 ? '#2ED573' : '#FF4757'}">${r.reward > 0 ? '+' : ''}${r.reward}</span>
+          </div>
+        </div>
+      `).join('') : '<div class="empty-state"><p>게임 기록이 없습니다</p></div>';
+    } catch (e) {}
+  },
+
+  // ==================== GALLERY ====================
+  async renderGallery() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <div class="page-title"><i class="fas fa-images page-title-icon" style="color:#1E90FF"></i> 갤러리</div>
+      <button class="btn btn-primary" onclick="App.showGalleryUpload()" style="margin-bottom:16px;width:100%"><i class="fas fa-plus"></i> 사진 올리기</button>
+      <div id="gallery-list"></div>
+    `;
+    this.loadGalleryList();
+  },
+
+  async loadGalleryList(page = 1) {
+    try {
+      const data = await this.api(`/api/gallery?page=${page}`);
+      const container = document.getElementById('gallery-list');
+      if (!container) return;
+      if (!data.posts.length) {
+        container.innerHTML = '<div class="empty-state"><p>아직 사진이 없습니다</p></div>';
+        return;
+      }
+      container.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+          ${data.posts.map(p => `
+            <div class="card" style="padding:0;overflow:hidden;cursor:pointer" onclick="App.viewGalleryPost(${p.id})">
+              ${p.thumbnail ? `<img src="${p.thumbnail}" style="width:100%;height:150px;object-fit:cover">` : '<div style="height:150px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center"><i class="fas fa-image" style="font-size:32px;color:var(--text-secondary)"></i></div>'}
+              <div style="padding:10px">
+                <b style="font-size:14px">${this.escapeHtml(p.title)}</b>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">
+                  ${this.escapeHtml(p.nickname)} · <i class="fas fa-heart" style="color:#FF6B9D"></i> ${p.hearts}
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        ${data.totalPages > 1 ? `<div style="display:flex;justify-content:center;gap:8px;margin-top:16px">
+          ${Array.from({length: data.totalPages}, (_, i) => `<button class="btn ${i + 1 === page ? 'btn-primary' : ''}" onclick="App.loadGalleryList(${i + 1})" style="min-width:36px">${i + 1}</button>`).join('')}
+        </div>` : ''}
+      `;
+    } catch (e) { document.getElementById('gallery-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  showGalleryUpload() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal" style="max-width:500px">
+        <div class="modal-header"><h3>사진 올리기</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+        <div class="modal-body">
+          <input type="text" id="gallery-title" class="input" placeholder="제목" style="margin-bottom:12px">
+          <textarea id="gallery-desc" class="input" placeholder="설명 (선택)" rows="3" style="margin-bottom:12px"></textarea>
+          <input type="file" id="gallery-photos" accept="image/*" multiple style="margin-bottom:12px">
+          <p style="font-size:12px;color:var(--text-secondary)">최대 10장</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="this.closest('.modal-overlay').remove()">취소</button>
+          <button class="btn btn-primary" onclick="App.submitGallery()">올리기</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  },
+
+  async submitGallery() {
+    const title = document.getElementById('gallery-title').value.trim();
+    const desc = document.getElementById('gallery-desc').value.trim();
+    const files = document.getElementById('gallery-photos').files;
+    if (!title) return alert('제목을 입력하세요');
+    if (!files.length) return alert('사진을 선택하세요');
+
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', desc);
+    for (let i = 0; i < Math.min(files.length, 10); i++) formData.append('photos', files[i]);
+
+    try {
+      await this.api('/api/gallery', { method: 'POST', body: formData, rawBody: true });
+      document.querySelector('.modal-overlay')?.remove();
+      this.renderGallery();
+      this.showToast('갤러리에 올렸습니다!');
+    } catch (e) { alert(e.message); }
+  },
+
+  async viewGalleryPost(id) {
+    try {
+      const data = await this.api(`/api/gallery/${id}`);
+      const p = data.post;
+      const content = document.getElementById('page-content');
+      content.innerHTML = `
+        <div class="page-title">
+          <i class="fas fa-arrow-left" style="cursor:pointer;margin-right:12px" onclick="App.renderGallery()"></i>
+          ${this.escapeHtml(p.title)}
+        </div>
+        <div class="card" style="padding:16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <b>${this.escapeHtml(p.nickname)}</b>
+            <span style="color:var(--text-secondary);font-size:12px">${new Date(p.created_at).toLocaleDateString('ko')}</span>
+          </div>
+          ${p.description ? `<p style="margin-bottom:12px">${this.escapeHtml(p.description)}</p>` : ''}
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${(p.photos || []).map(ph => `<img src="${ph.image_url}" style="width:100%;border-radius:8px;cursor:pointer" onclick="window.open(this.src)">`).join('')}
+          </div>
+          <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
+            <button class="btn" onclick="App.heartGallery(${p.id})"><i class="fas fa-heart" style="color:#FF6B9D"></i> ${p.hearts}</button>
+            ${p.user_id === this.user?.id ? `<button class="btn" style="color:#FF4757" onclick="App.deleteGallery(${p.id})"><i class="fas fa-trash"></i> 삭제</button>` : ''}
+          </div>
+        </div>
+      `;
+    } catch (e) { this.showToast(e.message); }
+  },
+
+  async deleteGallery(id) {
+    if (!confirm('삭제하시겠습니까?')) return;
+    try {
+      await this.api(`/api/gallery/${id}`, { method: 'DELETE' });
+      this.renderGallery();
+      this.showToast('삭제되었습니다');
+    } catch (e) { alert(e.message); }
+  },
+
+  async heartGallery(id) {
+    try {
+      const data = await this.api(`/api/gallery/${id}/heart`, { method: 'POST' });
+      this.viewGalleryPost(id);
+    } catch (e) { this.showToast(e.message); }
+  },
+
+  // ==================== LEVEL REWARDS ====================
+  async renderLevelRewards() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <div class="page-title"><i class="fas fa-gift page-title-icon" style="color:#FFD700"></i> 레벨 보상</div>
+      <div class="card" style="padding:16px;margin-bottom:16px;text-align:center">
+        <p>현재 레벨: <b style="font-size:20px;color:var(--primary)">Lv.${this.user.level}</b></p>
+      </div>
+      <div id="rewards-list">로딩중...</div>
+    `;
+    try {
+      const data = await this.api('/api/level-rewards');
+      const container = document.getElementById('rewards-list');
+      container.innerHTML = data.rewards.map(r => {
+        const canClaim = this.user.level >= r.level && !r.claimed;
+        const claimed = r.claimed;
+        return `
+          <div class="card" style="padding:16px;display:flex;justify-content:space-between;align-items:center;opacity:${claimed ? 0.6 : 1}">
+            <div>
+              <b>Lv.${r.level}</b>
+              <div style="font-size:13px;color:var(--text-secondary)">
+                <i class="fas fa-coins" style="color:#FFD700"></i> ${r.coins} 코인
+                ${r.title ? `· <i class="fas fa-crown" style="color:#E040FB"></i> "${r.title}" 칭호` : ''}
+              </div>
+            </div>
+            <div>
+              ${claimed ? '<span style="color:#2ED573"><i class="fas fa-check"></i> 수령완료</span>' :
+                canClaim ? `<button class="btn btn-primary" onclick="App.claimReward(${r.level})">받기</button>` :
+                `<span style="color:var(--text-secondary)"><i class="fas fa-lock"></i> Lv.${r.level}</span>`}
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) { document.getElementById('rewards-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  async claimReward(level) {
+    try {
+      const data = await this.api(`/api/level-rewards/${level}/claim`, { method: 'POST' });
+      this.user.coins = data.new_coins;
+      this.showToast(`보상을 받았습니다! +${data.reward_coins} 코인`);
+      this.renderLevelRewards();
+    } catch (e) { alert(e.message); }
+  },
+
+  // ==================== TITLES ====================
+  async renderTitles() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <div class="page-title"><i class="fas fa-crown page-title-icon" style="color:#E040FB"></i> 내 칭호</div>
+      <div id="titles-list">로딩중...</div>
+    `;
+    try {
+      const data = await this.api('/api/titles');
+      const container = document.getElementById('titles-list');
+      if (!data.titles.length) {
+        container.innerHTML = '<div class="empty-state"><p>아직 획득한 칭호가 없습니다</p><p style="font-size:13px;color:var(--text-secondary)">레벨 보상에서 칭호를 획득하세요!</p></div>';
+        return;
+      }
+      container.innerHTML = data.titles.map(t => `
+        <div class="card" style="padding:16px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <b style="color:#E040FB">${this.escapeHtml(t.title)}</b>
+            <div style="font-size:12px;color:var(--text-secondary)">${new Date(t.created_at).toLocaleDateString('ko')} 획득</div>
+          </div>
+          <button class="btn ${t.is_equipped ? 'btn-primary' : ''}" onclick="App.equipTitle('${this.escapeHtml(t.title)}', ${t.is_equipped ? 0 : 1})">
+            ${t.is_equipped ? '해제' : '장착'}
+          </button>
+        </div>
+      `).join('');
+    } catch (e) { document.getElementById('titles-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  async equipTitle(title, equip) {
+    try {
+      await this.api('/api/titles/equip', { method: 'POST', body: JSON.stringify({ title, equip: !!equip }), headers: { 'Content-Type': 'application/json' } });
+      this.showToast(equip ? '칭호를 장착했습니다!' : '칭호를 해제했습니다');
+      this.renderTitles();
+    } catch (e) { alert(e.message); }
+  },
+
+  // ==================== MY REPORTS ====================
+  async renderMyReports() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <div class="page-title"><i class="fas fa-flag page-title-icon" style="color:#FF4757"></i> 내 신고 내역</div>
+      <div id="my-reports-list">로딩중...</div>
+    `;
+    try {
+      const data = await this.api('/api/reports/my');
+      const container = document.getElementById('my-reports-list');
+      const statusMap = { pending: '대기중', reviewed: '처리됨', dismissed: '기각' };
+      const statusColor = { pending: '#FFA502', reviewed: '#2ED573', dismissed: '#FF4757' };
+      container.innerHTML = data.reports.length ? data.reports.map(r => `
+        <div class="card" style="padding:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <b>${this.escapeHtml(r.reason)}</b>
+            <span style="color:${statusColor[r.status] || '#999'};font-size:13px;font-weight:bold">${statusMap[r.status] || r.status}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text-secondary)">
+            대상: ${r.target_type} #${r.target_id} · ${new Date(r.created_at).toLocaleDateString('ko')}
+          </div>
+          ${r.admin_note ? `<div style="margin-top:8px;padding:8px;background:var(--bg-secondary);border-radius:8px;font-size:13px">관리자: ${this.escapeHtml(r.admin_note)}</div>` : ''}
+        </div>
+      `).join('') : '<div class="empty-state"><p>신고 내역이 없습니다</p></div>';
+    } catch (e) { document.getElementById('my-reports-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  // ==================== POLLS ====================
+  async renderPolls() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <div class="page-title"><i class="fas fa-poll page-title-icon" style="color:#1E90FF"></i> 투표</div>
+      <div id="polls-list">로딩중...</div>
+    `;
+    try {
+      const data = await this.api('/api/polls/active');
+      const container = document.getElementById('polls-list');
+      if (!data.polls.length) {
+        container.innerHTML = '<div class="empty-state"><p>진행중인 투표가 없습니다</p></div>';
+        return;
+      }
+      container.innerHTML = data.polls.map(p => {
+        const totalVotes = (p.options || []).reduce((s, o) => s + (o.votes || 0), 0);
+        return `
+          <div class="card" style="padding:16px;margin-bottom:12px">
+            <b style="font-size:16px">${this.escapeHtml(p.title)}</b>
+            <div style="font-size:12px;color:var(--text-secondary);margin:4px 0 12px">${this.escapeHtml(p.nickname || '')} · ${totalVotes}명 참여</div>
+            ${(p.options || []).map(o => {
+              const pct = totalVotes > 0 ? Math.round(o.votes / totalVotes * 100) : 0;
+              return `
+                <div style="margin-bottom:8px;cursor:pointer" onclick="App.votePoll(${p.id}, ${o.id})">
+                  <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px">
+                    <span>${this.escapeHtml(o.text)}</span>
+                    <span style="color:var(--text-secondary)">${pct}%</span>
+                  </div>
+                  <div style="height:8px;background:var(--bg-secondary);border-radius:4px;overflow:hidden">
+                    <div style="height:100%;width:${pct}%;background:var(--primary);border-radius:4px;transition:width 0.3s"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }).join('');
+    } catch (e) { document.getElementById('polls-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  async votePoll(pollId, optionId) {
+    try {
+      await this.api(`/api/polls/${pollId}/vote`, { method: 'POST', body: JSON.stringify({ option_id: optionId }), headers: { 'Content-Type': 'application/json' } });
+      this.showToast('투표했습니다!');
+      this.renderPolls();
+    } catch (e) { alert(e.message); }
+  },
+
   // ==================== SETTINGS ====================
   renderSettings() {
     const content = document.getElementById('page-content');
@@ -1663,6 +2121,22 @@ const App = {
         <div class="settings-item">
           <div class="settings-item-left"><i class="fas fa-${this.user.theme === 'dark' ? 'moon' : 'sun'}"></i><span class="settings-item-label">${this.user.theme === 'dark' ? '다크 모드' : '라이트 모드'}</span></div>
           <div class="toggle ${this.user.theme === 'dark' ? 'active' : ''}" onclick="App.toggleTheme()"></div>
+        </div>
+        <div class="settings-item" onclick="App.navigate('gallery')">
+          <div class="settings-item-left"><i class="fas fa-images" style="color:#1E90FF"></i><span class="settings-item-label">갤러리</span></div>
+          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="settings-item" onclick="App.navigate('titles')">
+          <div class="settings-item-left"><i class="fas fa-crown" style="color:#E040FB"></i><span class="settings-item-label">내 칭호</span></div>
+          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="settings-item" onclick="App.navigate('level-rewards')">
+          <div class="settings-item-left"><i class="fas fa-gift" style="color:#FFD700"></i><span class="settings-item-label">레벨 보상</span></div>
+          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="settings-item" onclick="App.navigate('my-reports')">
+          <div class="settings-item-left"><i class="fas fa-flag" style="color:#FF4757"></i><span class="settings-item-label">내 신고 내역</span></div>
+          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
         </div>
         <div class="settings-item" onclick="App.showCouponRedeem()">
           <div class="settings-item-left"><i class="fas fa-ticket-alt" style="color:#FF6B9D"></i><span class="settings-item-label">쿠폰 등록</span></div>
@@ -1889,6 +2363,7 @@ const App = {
         <div class="tab" onclick="App.loadAdminTab('notices', this)">공지</div>
         <div class="tab" onclick="App.loadAdminTab('referrals', this)">추천코드</div>
         <div class="tab" onclick="App.loadAdminTab('coupons', this)">쿠폰</div>
+        <div class="tab" onclick="App.loadAdminTab('banners', this)">배너</div>
         <div class="tab" onclick="App.loadAdminTab('logs', this)">기록</div>
       </div>
       <div id="admin-content"></div>
@@ -2052,6 +2527,25 @@ const App = {
             </table>
           </div>`;
       } catch (e) {}
+    } else if (tab === 'banners') {
+      try {
+        const data = await this.api('/api/admin/banners');
+        container.innerHTML = `
+          <button class="btn btn-primary" onclick="App.showBannerForm()" style="margin-bottom:12px"><i class="fas fa-plus"></i> 배너 추가</button>
+          ${data.banners.length ? data.banners.map(b => `
+            <div class="card" style="padding:12px;display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <b>${this.escapeHtml(b.title)}</b>
+                <div style="font-size:12px;color:var(--text-secondary)">${b.starts_at || ''} ~ ${b.ends_at || ''} · ${b.is_active ? '활성' : '비활성'}</div>
+              </div>
+              <div style="display:flex;gap:4px">
+                <button class="btn btn-small" onclick="App.showBannerForm(${b.id})">수정</button>
+                <button class="btn btn-small" style="color:var(--danger)" onclick="App.deleteBanner(${b.id})">삭제</button>
+              </div>
+            </div>
+          `).join('') : '<div class="empty-state"><p>배너가 없습니다</p></div>'}
+        `;
+      } catch (e) {}
     } else if (tab === 'logs') {
       try {
         const data = await this.api('/api/admin/logs');
@@ -2067,6 +2561,76 @@ const App = {
           </table></div>`;
       } catch (e) {}
     }
+  },
+
+  showBannerForm(id) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal" style="max-width:500px">
+        <div class="modal-header"><h3>${id ? '배너 수정' : '배너 추가'}</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+        <div class="modal-body">
+          <input type="text" id="banner-title" class="input" placeholder="제목" style="margin-bottom:8px">
+          <textarea id="banner-desc" class="input" placeholder="설명" rows="2" style="margin-bottom:8px"></textarea>
+          <input type="text" id="banner-image" class="input" placeholder="이미지 URL (선택)" style="margin-bottom:8px">
+          <input type="text" id="banner-link" class="input" placeholder="링크 URL (선택)" style="margin-bottom:8px">
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <input type="date" id="banner-start" class="input" style="flex:1">
+            <input type="date" id="banner-end" class="input" style="flex:1">
+          </div>
+          <label><input type="checkbox" id="banner-active" checked> 활성화</label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="this.closest('.modal-overlay').remove()">취소</button>
+          <button class="btn btn-primary" onclick="App.saveBanner(${id || 'null'})">${id ? '수정' : '추가'}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    if (id) {
+      this.api(`/api/admin/banners`).then(data => {
+        const b = data.banners.find(x => x.id === id);
+        if (b) {
+          document.getElementById('banner-title').value = b.title || '';
+          document.getElementById('banner-desc').value = b.description || '';
+          document.getElementById('banner-image').value = b.image_url || '';
+          document.getElementById('banner-link').value = b.link || '';
+          document.getElementById('banner-start').value = (b.starts_at || '').slice(0, 10);
+          document.getElementById('banner-end').value = (b.ends_at || '').slice(0, 10);
+          document.getElementById('banner-active').checked = !!b.is_active;
+        }
+      });
+    }
+  },
+
+  async saveBanner(id) {
+    const body = {
+      title: document.getElementById('banner-title').value.trim(),
+      description: document.getElementById('banner-desc').value.trim(),
+      image_url: document.getElementById('banner-image').value.trim(),
+      link: document.getElementById('banner-link').value.trim(),
+      starts_at: document.getElementById('banner-start').value,
+      ends_at: document.getElementById('banner-end').value,
+      is_active: document.getElementById('banner-active').checked ? 1 : 0,
+    };
+    if (!body.title) return alert('제목을 입력하세요');
+    try {
+      const url = id ? `/api/admin/banners/${id}` : '/api/admin/banners';
+      const method = id ? 'PUT' : 'POST';
+      await this.api(url, { method, body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
+      document.querySelector('.modal-overlay')?.remove();
+      this.loadAdminTab('banners', document.querySelector('.tab.active'));
+      this.showToast(id ? '배너를 수정했습니다' : '배너를 추가했습니다');
+    } catch (e) { alert(e.message); }
+  },
+
+  async deleteBanner(id) {
+    if (!confirm('삭제하시겠습니까?')) return;
+    try {
+      await this.api(`/api/admin/banners/${id}`, { method: 'DELETE' });
+      this.loadAdminTab('banners', document.querySelector('.tab.active'));
+      this.showToast('배너를 삭제했습니다');
+    } catch (e) { alert(e.message); }
   },
 
   async searchAdminUsers() {

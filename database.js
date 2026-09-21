@@ -16,7 +16,9 @@ const ALL_TABLES = [
   'heart_rewards', 'attendance_rewards', 'teacher_chat_rooms', 'teacher_messages',
   'polls', 'poll_options', 'poll_votes', 'fcm_tokens',
   'referral_codes', 'referral_uses', 'coupons', 'coupon_uses',
-  'achievements', 'user_achievements', 'user_mission_progress'
+  'achievements', 'user_achievements', 'user_mission_progress',
+  'event_banners', 'minigame_records', 'gallery_posts', 'gallery_photos',
+  'level_rewards', 'user_titles', 'report_auto_actions'
 ];
 
 class BetterSqlite3Compat {
@@ -210,6 +212,7 @@ async function initDatabase() {
       profile_image TEXT DEFAULT '/default-avatar.png',
       profile_frame TEXT DEFAULT '',
       bio TEXT DEFAULT '',
+      title TEXT DEFAULT '',
       level INTEGER DEFAULT 1,
       exp INTEGER DEFAULT 0,
       coins INTEGER DEFAULT 0,
@@ -392,6 +395,7 @@ async function initDatabase() {
     name TEXT NOT NULL,
     description TEXT DEFAULT '',
     image TEXT DEFAULT '',
+    announcement TEXT DEFAULT '',
     type TEXT DEFAULT 'public',
     password TEXT DEFAULT '',
     owner_id INTEGER NOT NULL,
@@ -688,6 +692,85 @@ async function initDatabase() {
     mission_date TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id),
     UNIQUE(user_id, mission_key, mission_date)
+  )`);
+
+  // 이벤트/공지 배너
+  db.exec(`CREATE TABLE IF NOT EXISTS event_banners (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    image_url TEXT DEFAULT '',
+    link TEXT DEFAULT '',
+    is_active INTEGER DEFAULT 1,
+    sort_order INTEGER DEFAULT 0,
+    starts_at DATETIME,
+    ends_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // 미니게임 기록
+  db.exec(`CREATE TABLE IF NOT EXISTS minigame_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    game_type TEXT NOT NULL,
+    bet_amount INTEGER DEFAULT 0,
+    result TEXT NOT NULL,
+    reward INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`);
+
+  // 갤러리 게시글
+  db.exec(`CREATE TABLE IF NOT EXISTS gallery_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    hearts INTEGER DEFAULT 0,
+    is_deleted INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`);
+
+  // 갤러리 사진
+  db.exec(`CREATE TABLE IF NOT EXISTS gallery_photos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gallery_id INTEGER NOT NULL,
+    image_url TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (gallery_id) REFERENCES gallery_posts(id)
+  )`);
+
+  // 레벨업 보상 기록
+  db.exec(`CREATE TABLE IF NOT EXISTS level_rewards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    level INTEGER NOT NULL,
+    reward_coins INTEGER DEFAULT 0,
+    reward_title TEXT DEFAULT '',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, level)
+  )`);
+
+  // 유저 칭호
+  db.exec(`CREATE TABLE IF NOT EXISTS user_titles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    is_equipped INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`);
+
+  // 신고 자동 제재 기록
+  db.exec(`CREATE TABLE IF NOT EXISTS report_auto_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    action_type TEXT NOT NULL,
+    report_count INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
 
   const firebaseData = await loadFromFirebase();

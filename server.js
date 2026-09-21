@@ -163,6 +163,16 @@ function addExp(userId) {
     db.prepare('INSERT INTO notifications (user_id, type, title, message) VALUES (?, ?, ?, ?)').run(
       userId, 'level_up', '레벨 업!', `축하합니다! 레벨 ${newLevel}이 되었습니다!`
     );
+    checkLevelRewards(userId, newLevel);
+  }
+}
+
+function checkLevelRewards(userId, level) {
+  const LEVEL_MILESTONES = [5, 10, 15, 20, 25, 30, 40, 50];
+  if (!LEVEL_MILESTONES.includes(level)) return;
+  const existing = db.prepare('SELECT id FROM level_rewards WHERE user_id = ? AND level = ?').get(userId, level);
+  if (!existing) {
+    createNotification(userId, 'level_up', '레벨업 보상!', `레벨 ${level} 달성 보상을 받을 수 있습니다! 레벨 보상 페이지를 확인하세요.`);
   }
 }
 
@@ -1639,17 +1649,27 @@ function checkAchievements(userId) {
     let value = 0;
     switch (ach.condition_type) {
       case 'posts':
-        value = db.prepare('SELECT COUNT(*) as cnt FROM posts WHERE author_id = ? AND is_deleted = 0').get(userId).cnt;
+        value = db.prepare('SELECT COUNT(*) as cnt FROM posts WHERE user_id = ? AND is_deleted = 0').get(userId).cnt;
         break;
       case 'comments':
-        value = db.prepare('SELECT COUNT(*) as cnt FROM comments WHERE author_id = ? AND is_deleted = 0').get(userId).cnt;
+        value = db.prepare('SELECT COUNT(*) as cnt FROM comments WHERE user_id = ? AND is_deleted = 0').get(userId).cnt;
         break;
       case 'friends':
         value = db.prepare('SELECT COUNT(*) as cnt FROM friends WHERE (user_id = ? OR friend_id = ?) AND status = ?').get(userId, userId, 'accepted').cnt;
         break;
       case 'attendance_streak': {
-        const att = db.prepare('SELECT streak FROM attendance WHERE user_id = ? ORDER BY date DESC LIMIT 1').get(userId);
-        value = att ? att.streak : 0;
+        const records = db.prepare('SELECT date FROM attendance WHERE user_id = ? ORDER BY date DESC').all(userId);
+        let streak = 0;
+        if (records.length > 0) {
+          const today = new Date().toISOString().split('T')[0];
+          const d = new Date(today);
+          for (const r of records) {
+            const rd = new Date(r.date);
+            const diff = Math.floor((d - rd) / (1000 * 60 * 60 * 24));
+            if (diff <= 1) { streak++; d.setDate(d.getDate() - 1); } else break;
+          }
+        }
+        value = streak;
         break;
       }
       case 'level': {
@@ -1658,7 +1678,7 @@ function checkAchievements(userId) {
         break;
       }
       case 'hearts_received':
-        value = db.prepare('SELECT COUNT(*) as cnt FROM post_hearts ph JOIN posts p ON ph.post_id = p.id WHERE p.author_id = ?').get(userId).cnt;
+        value = db.prepare('SELECT COUNT(*) as cnt FROM post_hearts ph JOIN posts p ON ph.post_id = p.id WHERE p.user_id = ?').get(userId).cnt;
         break;
     }
     if (value >= ach.condition_value) {
@@ -1673,6 +1693,381 @@ function checkAchievements(userId) {
     }
   }
 }
+
+// ==================== RANKING ENHANCED API ====================
+
+app.get('/api/ranking/weekly', auth, (req, res) => {
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const type = req.query.type || 'exp';
+
+  if (type === 'exp') {
+    const users = db.prepare(`
+      SELECT id, nickname, profile_image, level, exp, title
+      FROM users WHERE is_banned = 0 AND role != 'admin'
+      ORDER BY exp DESC LIMIT 50
+    `).all();
+    return res.json({ users });
+  }
+  if (type === 'posts') {
+    const users = db.prepare(`
+      SELECT u.id, u.nickname, u.profile_image, u.level, u.title,
+      COUNT(p.id) as count
+      FROM users u LEFT JOIN posts p ON u.id = p.user_id AND p.is_deleted = 0 AND p.created_at > ?
+      WHERE u.is_banned = 0 AND u.role != 'admin'
+      GROUP BY u.id ORDER BY count DESC LIMIT 50
+    `).all(weekAgo);
+    return res.json({ users });
+  }
+  if (type === 'hearts') {
+    const users = db.prepare(`
+      SELECT u.id, u.nickname, u.profile_image, u.level, u.title,
+      COALESCE(SUM(p.hearts), 0) as count
+      FROM users u LEFT JOIN posts p ON u.id = p.user_id AND p.is_deleted = 0
+      WHERE u.is_banned = 0 AND u.role != 'admin'
+      GROUP BY u.id ORDER BY count DESC LIMIT 50
+    `).all();
+    return res.json({ users });
+  }
+  if (type === 'attendance') {
+    const users = db.prepare(`
+      SELECT u.id, u.nickname, u.profile_image, u.level, u.title,
+      COUNT(a.id) as count
+      FROM users u LEFT JOIN attendance a ON u.id = a.user_id
+      WHERE u.is_banned = 0 AND u.role != 'admin'
+      GROUP BY u.id ORDER BY count DESC LIMIT 50
+    `).all();
+    return res.json({ users });
+  }
+  res.json({ users: [] });
+});
+
+// ==================== MINIGAME API ====================
+
+app.post('/api/minigame/roulette', auth, (req, res) => {
+  const { bet } = req.body;
+  const betAmount = parseInt(bet) || 10;
+  if (betAmount < 1 || betAmount > 1000) return res.status(400).json({ error: '베팅은 1~1000 코인입니다.' });
+  if (req.user.coins < betAmount) return res.status(400).json({ error: '코인이 부족합니다.' });
+
+  const segments = [
+    { label: 'x0', multiplier: 0, weight: 30 },
+    { label: 'x0.5', multiplier: 0.5, weight: 25 },
+    { label: 'x1', multiplier: 1, weight: 20 },
+    { label: 'x2', multiplier: 2, weight: 15 },
+    { label: 'x3', multiplier: 3, weight: 7 },
+    { label: 'x5', multiplier: 5, weight: 3 },
+  ];
+  const totalWeight = segments.reduce((s, seg) => s + seg.weight, 0);
+  let rand = Math.random() * totalWeight;
+  let chosen = segments[0];
+  for (const seg of segments) {
+    rand -= seg.weight;
+    if (rand <= 0) { chosen = seg; break; }
+  }
+
+  const reward = Math.floor(betAmount * chosen.multiplier);
+  const net = reward - betAmount;
+  db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(net, req.user.id);
+  db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(
+    req.user.id, net, `룰렛 ${chosen.label} (베팅: ${betAmount})`
+  );
+  db.prepare('INSERT INTO minigame_records (user_id, game_type, bet_amount, result, reward) VALUES (?, ?, ?, ?, ?)').run(
+    req.user.id, 'roulette', betAmount, chosen.label, reward
+  );
+  req.user.coins += net;
+  res.json({ result: chosen.label, multiplier: chosen.multiplier, reward, net, coins: req.user.coins });
+});
+
+app.post('/api/minigame/rps', auth, (req, res) => {
+  const { choice, bet } = req.body;
+  const betAmount = parseInt(bet) || 10;
+  if (!['rock', 'paper', 'scissors'].includes(choice)) return res.status(400).json({ error: '잘못된 선택입니다.' });
+  if (betAmount < 1 || betAmount > 500) return res.status(400).json({ error: '베팅은 1~500 코인입니다.' });
+  if (req.user.coins < betAmount) return res.status(400).json({ error: '코인이 부족합니다.' });
+
+  const choices = ['rock', 'paper', 'scissors'];
+  const cpuChoice = choices[Math.floor(Math.random() * 3)];
+  let result;
+  if (choice === cpuChoice) result = 'draw';
+  else if ((choice === 'rock' && cpuChoice === 'scissors') || (choice === 'paper' && cpuChoice === 'rock') || (choice === 'scissors' && cpuChoice === 'paper')) result = 'win';
+  else result = 'lose';
+
+  let net = 0;
+  if (result === 'win') net = betAmount;
+  else if (result === 'lose') net = -betAmount;
+
+  db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(net, req.user.id);
+  if (net !== 0) {
+    db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(
+      req.user.id, net, `가위바위보 ${result === 'win' ? '승리' : '패배'} (베팅: ${betAmount})`
+    );
+  }
+  db.prepare('INSERT INTO minigame_records (user_id, game_type, bet_amount, result, reward) VALUES (?, ?, ?, ?, ?)').run(
+    req.user.id, 'rps', betAmount, result, result === 'win' ? betAmount * 2 : 0
+  );
+  req.user.coins += net;
+  res.json({ result, cpuChoice, net, coins: req.user.coins });
+});
+
+app.post('/api/minigame/coinflip', auth, (req, res) => {
+  const { choice, bet } = req.body;
+  const betAmount = parseInt(bet) || 10;
+  if (!['heads', 'tails'].includes(choice)) return res.status(400).json({ error: '잘못된 선택입니다.' });
+  if (betAmount < 1 || betAmount > 500) return res.status(400).json({ error: '베팅은 1~500 코인입니다.' });
+  if (req.user.coins < betAmount) return res.status(400).json({ error: '코인이 부족합니다.' });
+
+  const coinResult = Math.random() < 0.5 ? 'heads' : 'tails';
+  const win = choice === coinResult;
+  const net = win ? betAmount : -betAmount;
+
+  db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(net, req.user.id);
+  db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(
+    req.user.id, net, `동전 던지기 ${win ? '승리' : '패배'} (베팅: ${betAmount})`
+  );
+  db.prepare('INSERT INTO minigame_records (user_id, game_type, bet_amount, result, reward) VALUES (?, ?, ?, ?, ?)').run(
+    req.user.id, 'coinflip', betAmount, win ? 'win' : 'lose', win ? betAmount * 2 : 0
+  );
+  req.user.coins += net;
+  res.json({ result: coinResult, win, net, coins: req.user.coins });
+});
+
+app.get('/api/minigame/history', auth, (req, res) => {
+  const records = db.prepare('SELECT * FROM minigame_records WHERE user_id = ? ORDER BY created_at DESC LIMIT 30').all(req.user.id);
+  res.json({ records });
+});
+
+// ==================== GALLERY API ====================
+
+app.get('/api/gallery', auth, (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = 20;
+  const offset = (page - 1) * limit;
+  const posts = db.prepare(`
+    SELECT g.*, u.nickname, u.profile_image, u.level,
+    (SELECT image_url FROM gallery_photos WHERE gallery_id = g.id LIMIT 1) as thumbnail,
+    (SELECT COUNT(*) FROM gallery_photos WHERE gallery_id = g.id) as photo_count
+    FROM gallery_posts g JOIN users u ON g.user_id = u.id
+    WHERE g.is_deleted = 0
+    ORDER BY g.created_at DESC LIMIT ? OFFSET ?
+  `).all(limit, offset);
+  const total = db.prepare('SELECT COUNT(*) as cnt FROM gallery_posts WHERE is_deleted = 0').get().cnt;
+  res.json({ posts, total, page, totalPages: Math.ceil(total / limit) });
+});
+
+app.get('/api/gallery/:id', auth, (req, res) => {
+  const post = db.prepare(`
+    SELECT g.*, u.nickname, u.profile_image, u.level
+    FROM gallery_posts g JOIN users u ON g.user_id = u.id
+    WHERE g.id = ? AND g.is_deleted = 0
+  `).get(req.params.id);
+  if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+  const photos = db.prepare('SELECT * FROM gallery_photos WHERE gallery_id = ? ORDER BY id ASC').all(req.params.id);
+  res.json({ post, photos });
+});
+
+app.post('/api/gallery', auth, upload.array('photos', 10), (req, res) => {
+  const { title, description } = req.body;
+  if (!title) return res.status(400).json({ error: '제목을 입력해주세요.' });
+  if (!req.files || req.files.length === 0) return res.status(400).json({ error: '사진을 1장 이상 첨부해주세요.' });
+
+  const result = db.prepare('INSERT INTO gallery_posts (user_id, title, description) VALUES (?, ?, ?)').run(
+    req.user.id, filterBadWords(title), filterBadWords(description || '')
+  );
+  for (const file of req.files) {
+    db.prepare('INSERT INTO gallery_photos (gallery_id, image_url) VALUES (?, ?)').run(
+      result.lastInsertRowid, `/uploads/${file.filename}`
+    );
+  }
+  addExp(req.user.id);
+  res.json({ message: '갤러리에 업로드되었습니다!', galleryId: result.lastInsertRowid });
+});
+
+app.delete('/api/gallery/:id', auth, (req, res) => {
+  const post = db.prepare('SELECT * FROM gallery_posts WHERE id = ?').get(req.params.id);
+  if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+  if (post.user_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: '권한이 없습니다.' });
+  db.prepare('UPDATE gallery_posts SET is_deleted = 1 WHERE id = ?').run(req.params.id);
+  res.json({ message: '삭제되었습니다.' });
+});
+
+app.post('/api/gallery/:id/heart', auth, (req, res) => {
+  const post = db.prepare('SELECT * FROM gallery_posts WHERE id = ? AND is_deleted = 0').get(req.params.id);
+  if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+  db.prepare('UPDATE gallery_posts SET hearts = hearts + 1 WHERE id = ?').run(req.params.id);
+  res.json({ hearts: post.hearts + 1 });
+});
+
+// ==================== EVENT BANNERS API ====================
+
+app.get('/api/banners', auth, (req, res) => {
+  const now = new Date().toISOString();
+  const banners = db.prepare(`
+    SELECT * FROM event_banners
+    WHERE is_active = 1 AND (starts_at IS NULL OR starts_at <= ?) AND (ends_at IS NULL OR ends_at >= ?)
+    ORDER BY sort_order ASC, created_at DESC
+  `).all(now, now);
+  res.json({ banners });
+});
+
+app.get('/api/admin/banners', adminAuth, (req, res) => {
+  const banners = db.prepare('SELECT * FROM event_banners ORDER BY created_at DESC').all();
+  res.json({ banners });
+});
+
+app.post('/api/admin/banners', adminAuth, (req, res) => {
+  const { title, description, link, startsAt, endsAt, sortOrder } = req.body;
+  if (!title) return res.status(400).json({ error: '제목을 입력해주세요.' });
+  db.prepare('INSERT INTO event_banners (title, description, link, starts_at, ends_at, sort_order) VALUES (?, ?, ?, ?, ?, ?)').run(
+    title, description || '', link || '', startsAt || null, endsAt || null, sortOrder || 0
+  );
+  res.json({ message: '배너가 생성되었습니다.' });
+});
+
+app.put('/api/admin/banners/:id', adminAuth, (req, res) => {
+  const { title, description, link, startsAt, endsAt, sortOrder, isActive } = req.body;
+  db.prepare('UPDATE event_banners SET title = ?, description = ?, link = ?, starts_at = ?, ends_at = ?, sort_order = ?, is_active = ? WHERE id = ?').run(
+    title, description || '', link || '', startsAt || null, endsAt || null, sortOrder || 0, isActive ? 1 : 0, req.params.id
+  );
+  res.json({ message: '배너가 수정되었습니다.' });
+});
+
+app.delete('/api/admin/banners/:id', adminAuth, (req, res) => {
+  db.prepare('DELETE FROM event_banners WHERE id = ?').run(req.params.id);
+  res.json({ message: '배너가 삭제되었습니다.' });
+});
+
+// ==================== LEVEL REWARDS API ====================
+
+const LEVEL_REWARDS = [
+  { level: 5, coins: 50, title: '새싹' },
+  { level: 10, coins: 100, title: '초보' },
+  { level: 15, coins: 150, title: '' },
+  { level: 20, coins: 200, title: '중수' },
+  { level: 25, coins: 300, title: '' },
+  { level: 30, coins: 500, title: '고수' },
+  { level: 40, coins: 700, title: '달인' },
+  { level: 50, coins: 1000, title: '마스터' },
+];
+
+app.get('/api/level-rewards', auth, (req, res) => {
+  const claimed = db.prepare('SELECT level FROM level_rewards WHERE user_id = ?').all(req.user.id).map(r => r.level);
+  const rewards = LEVEL_REWARDS.map(r => ({ ...r, claimed: claimed.includes(r.level), canClaim: req.user.level >= r.level && !claimed.includes(r.level) }));
+  res.json({ rewards, userLevel: req.user.level });
+});
+
+app.post('/api/level-rewards/:level/claim', auth, (req, res) => {
+  const level = parseInt(req.params.level);
+  const reward = LEVEL_REWARDS.find(r => r.level === level);
+  if (!reward) return res.status(404).json({ error: '보상을 찾을 수 없습니다.' });
+  if (req.user.level < level) return res.status(400).json({ error: '레벨이 부족합니다.' });
+  const existing = db.prepare('SELECT id FROM level_rewards WHERE user_id = ? AND level = ?').get(req.user.id, level);
+  if (existing) return res.status(400).json({ error: '이미 받은 보상입니다.' });
+
+  db.prepare('INSERT INTO level_rewards (user_id, level, reward_coins, reward_title) VALUES (?, ?, ?, ?)').run(
+    req.user.id, level, reward.coins, reward.title
+  );
+  addCoins(req.user.id, reward.coins, `레벨 ${level} 달성 보상`);
+  if (reward.title) {
+    db.prepare('INSERT INTO user_titles (user_id, title) VALUES (?, ?)').run(req.user.id, reward.title);
+  }
+  const user = db.prepare('SELECT coins FROM users WHERE id = ?').get(req.user.id);
+  res.json({ message: `레벨 ${level} 보상을 받았습니다! +${reward.coins} 코인${reward.title ? ` / 칭호: ${reward.title}` : ''}`, coins: user.coins });
+});
+
+// ==================== TITLES API ====================
+
+app.get('/api/titles', auth, (req, res) => {
+  const titles = db.prepare('SELECT * FROM user_titles WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
+  const equippedTitle = req.user.title || '';
+  res.json({ titles, equippedTitle });
+});
+
+app.post('/api/titles/equip', auth, (req, res) => {
+  const { title } = req.body;
+  db.prepare('UPDATE user_titles SET is_equipped = 0 WHERE user_id = ?').run(req.user.id);
+  if (title) {
+    db.prepare('UPDATE user_titles SET is_equipped = 1 WHERE user_id = ? AND title = ?').run(req.user.id, title);
+  }
+  db.prepare('UPDATE users SET title = ? WHERE id = ?').run(title || '', req.user.id);
+  res.json({ message: title ? `"${title}" 칭호를 장착했습니다.` : '칭호를 해제했습니다.' });
+});
+
+// ==================== REPORT ENHANCED API ====================
+
+app.get('/api/reports/my', auth, (req, res) => {
+  const reports = db.prepare(`
+    SELECT * FROM reports WHERE reporter_id = ? ORDER BY created_at DESC LIMIT 20
+  `).all(req.user.id);
+  res.json({ reports });
+});
+
+// ==================== CHAT ROOM CUSTOMIZATION API ====================
+
+app.put('/api/rooms/:id/settings', auth, (req, res) => {
+  const room = db.prepare('SELECT * FROM chat_rooms WHERE id = ?').get(req.params.id);
+  if (!room) return res.status(404).json({ error: '수다방을 찾을 수 없습니다.' });
+  const member = db.prepare("SELECT * FROM chat_room_members WHERE room_id = ? AND user_id = ? AND role IN ('owner', 'admin')").get(room.id, req.user.id);
+  if (!member && req.user.role !== 'admin') return res.status(403).json({ error: '권한이 없습니다.' });
+
+  const { name, description, announcement } = req.body;
+  if (name) db.prepare('UPDATE chat_rooms SET name = ? WHERE id = ?').run(name, room.id);
+  if (description !== undefined) db.prepare('UPDATE chat_rooms SET description = ? WHERE id = ?').run(description, room.id);
+  if (announcement !== undefined) db.prepare('UPDATE chat_rooms SET announcement = ? WHERE id = ?').run(announcement, room.id);
+
+  res.json({ message: '수다방 설정이 변경되었습니다.' });
+});
+
+app.get('/api/rooms/:id/info', auth, (req, res) => {
+  const room = db.prepare(`
+    SELECT cr.*, u.nickname as owner_name,
+    (SELECT COUNT(*) FROM chat_room_members WHERE room_id = cr.id) as member_count
+    FROM chat_rooms cr JOIN users u ON cr.owner_id = u.id
+    WHERE cr.id = ?
+  `).get(req.params.id);
+  if (!room) return res.status(404).json({ error: '수다방을 찾을 수 없습니다.' });
+
+  const members = db.prepare(`
+    SELECT u.id, u.nickname, u.profile_image, u.level, u.is_online, crm.role
+    FROM chat_room_members crm JOIN users u ON crm.user_id = u.id
+    WHERE crm.room_id = ?
+    ORDER BY crm.role DESC, u.is_online DESC
+  `).all(req.params.id);
+
+  const myRole = db.prepare('SELECT role FROM chat_room_members WHERE room_id = ? AND user_id = ?').get(req.params.id, req.user.id);
+
+  res.json({ room, members, myRole: myRole ? myRole.role : null });
+});
+
+// ==================== POLLS ENHANCED (게시판 투표) API ====================
+
+app.post('/api/posts/:id/poll', auth, (req, res) => {
+  const { question, options } = req.body;
+  if (!question || !options || options.length < 2) return res.status(400).json({ error: '질문과 2개 이상의 선택지가 필요합니다.' });
+
+  const result = db.prepare('INSERT INTO polls (room_id, creator_id, question, type) VALUES (?, ?, ?, ?)').run(
+    0, req.user.id, question, 'post_poll'
+  );
+  for (const opt of options) {
+    db.prepare('INSERT INTO poll_options (poll_id, option_text) VALUES (?, ?)').run(result.lastInsertRowid, opt);
+  }
+  res.json({ message: '투표가 생성되었습니다.', pollId: result.lastInsertRowid });
+});
+
+app.get('/api/polls/active', auth, (req, res) => {
+  const polls = db.prepare(`
+    SELECT p.*, u.nickname as creator_name
+    FROM polls p JOIN users u ON p.creator_id = u.id
+    WHERE p.is_active = 1
+    ORDER BY p.created_at DESC LIMIT 20
+  `).all();
+  for (const poll of polls) {
+    poll.options = db.prepare('SELECT * FROM poll_options WHERE poll_id = ?').all(poll.id);
+    const totalVotes = poll.options.reduce((s, o) => s + o.votes, 0);
+    poll.totalVotes = totalVotes;
+    poll.userVote = db.prepare('SELECT option_id FROM poll_votes WHERE poll_id = ? AND user_id = ?').get(poll.id, req.user.id);
+  }
+  res.json({ polls });
+});
 
 // ==================== SOCKET.IO ====================
 
