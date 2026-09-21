@@ -409,6 +409,8 @@ const App = {
       'school-albums': () => this.renderSchoolAlbums(),
       'teacher-chat': () => this.renderTeacherChat(),
       'student-dashboard': () => this.renderStudentDashboard(),
+      missions: () => this.renderMissions(),
+      achievements: () => this.renderAchievements(),
     };
 
     if (pages[page]) pages[page]();
@@ -508,6 +510,22 @@ const App = {
           <div style="font-size:14px;font-weight:700">상점</div>
           <div class="attendance-text">코인으로 아이템 구매</div>
           <button class="attendance-btn" style="background:var(--secondary)">둘러보기</button>
+        </div>
+      </div>
+
+      <!-- Missions & Achievements -->
+      <div class="attendance-card">
+        <div class="attendance-box" onclick="App.navigate('missions')" style="cursor:pointer">
+          <div class="attendance-icon">🎯</div>
+          <div style="font-size:14px;font-weight:700">일일 미션</div>
+          <div class="attendance-text">미션 완료하고 보상 받기</div>
+          <button class="attendance-btn" style="background:#FF6B9D">도전하기</button>
+        </div>
+        <div class="attendance-box" onclick="App.navigate('achievements')" style="cursor:pointer">
+          <div class="attendance-icon">🏆</div>
+          <div style="font-size:14px;font-weight:700">업적</div>
+          <div class="attendance-text">업적 달성하고 뱃지 모으기</div>
+          <button class="attendance-btn" style="background:#FFD700;color:#333">확인하기</button>
         </div>
       </div>
 
@@ -2197,6 +2215,80 @@ const App = {
       this.showToast('비활성화되었습니다.', 'success');
       this.loadAdminTab('coupons', document.querySelector('.tab.active'));
     } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  // ==================== MISSIONS & ACHIEVEMENTS PAGES ====================
+
+  async renderMissions() {
+    const content = document.getElementById('page-content');
+    try {
+      const data = await this.api('/api/missions');
+      const completedCount = data.missions.filter(m => m.completed).length;
+      const claimedCount = data.missions.filter(m => m.claimed).length;
+
+      content.innerHTML = `
+        <div class="page-title"><i class="fas fa-crosshairs page-title-icon" style="color:#FF6B9D"></i> 일일 미션</div>
+        <div class="card" style="text-align:center;margin-bottom:16px;background:linear-gradient(135deg,#FF6B9D20,#6C63FF20)">
+          <div style="font-size:14px;color:var(--text-secondary)">오늘의 미션 진행도</div>
+          <div style="font-size:28px;font-weight:800;margin:8px 0;color:var(--primary)">${claimedCount} / ${data.missions.length}</div>
+          <div class="profile-card-bar" style="height:8px;margin-top:8px"><div class="profile-card-bar-fill" style="width:${(claimedCount / data.missions.length) * 100}%;background:linear-gradient(90deg,#FF6B9D,#6C63FF)"></div></div>
+        </div>
+        ${data.missions.map(m => `
+          <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;${m.claimed ? 'opacity:0.6' : ''}">
+            <div style="font-size:28px;min-width:40px;text-align:center">${m.icon}</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:15px">${this.escapeHtml(m.name)}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${this.escapeHtml(m.description)}</div>
+              <div class="profile-card-bar" style="height:6px;margin-top:6px"><div class="profile-card-bar-fill" style="width:${(m.progress / m.target) * 100}%;background:${m.completed ? 'var(--success)' : 'var(--primary)'}"></div></div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.progress}/${m.target}</div>
+            </div>
+            <div style="text-align:center;min-width:70px">
+              <div style="font-size:12px;color:var(--warning);font-weight:700">+${m.reward} 코인</div>
+              ${m.claimed ? '<span class="badge badge-user" style="margin-top:4px">완료</span>'
+                : m.completed ? `<button class="btn btn-success btn-small" style="margin-top:4px" onclick="App.claimMission('${m.key}')">받기</button>`
+                : '<span style="font-size:11px;color:var(--text-muted)">진행중</span>'}
+            </div>
+          </div>
+        `).join('')}
+      `;
+    } catch (e) { content.innerHTML = '<div class="empty-state"><p>미션을 불러올 수 없습니다.</p></div>'; }
+  },
+
+  async claimMission(key) {
+    try {
+      const data = await this.api(`/api/missions/${key}/claim`, { method: 'POST' });
+      this.user.coins = data.coins;
+      this.showToast(data.message, 'success');
+      this.renderMissions();
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  async renderAchievements() {
+    const content = document.getElementById('page-content');
+    try {
+      const data = await this.api('/api/achievements');
+      const unlocked = data.achievements.filter(a => a.unlocked).length;
+
+      content.innerHTML = `
+        <div class="page-title"><i class="fas fa-trophy page-title-icon" style="color:#FFD700"></i> 업적</div>
+        <div class="card" style="text-align:center;margin-bottom:16px;background:linear-gradient(135deg,#FFD70020,#FFA50220)">
+          <div style="font-size:14px;color:var(--text-secondary)">달성한 업적</div>
+          <div style="font-size:28px;font-weight:800;margin:8px 0;color:#FFD700">${unlocked} / ${data.achievements.length}</div>
+          <div class="profile-card-bar" style="height:8px;margin-top:8px"><div class="profile-card-bar-fill" style="width:${(unlocked / data.achievements.length) * 100}%;background:linear-gradient(90deg,#FFD700,#FFA502)"></div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${data.achievements.map(a => `
+            <div class="card" style="text-align:center;padding:16px 8px;${a.unlocked ? '' : 'opacity:0.4;filter:grayscale(1)'}">
+              <div style="font-size:36px">${a.icon}</div>
+              <div style="font-weight:700;font-size:14px;margin-top:8px">${this.escapeHtml(a.name)}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${this.escapeHtml(a.description)}</div>
+              ${a.reward_coins > 0 ? `<div style="font-size:11px;color:var(--warning);margin-top:4px">+${a.reward_coins} 코인</div>` : ''}
+              ${a.unlocked ? '<div style="font-size:11px;color:var(--success);margin-top:4px"><i class="fas fa-check-circle"></i> 달성!</div>' : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } catch (e) { content.innerHTML = '<div class="empty-state"><p>업적을 불러올 수 없습니다.</p></div>'; }
   },
 
   // ==================== TEACHER PAGES ====================

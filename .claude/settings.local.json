@@ -65,7 +65,8 @@
       "PowerShell(winget install --id Microsoft.OpenJDK.17 --accept-source-agreements --accept-package-agreements)",
       "PowerShell($env:JAVA_HOME = \"C:\\\\Program Files\\\\Microsoft\\\\jdk-17.0.20.101-hotspot\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;C:\\\\Program Files\\\\nodejs;C:\\\\Program Files\\\\Git\\\\cmd;$env:PATH\"; cd \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\\\\android-app\"; .\\\\gradlew.bat assembleDebug)",
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; try { Get-NetTCPConnection -LocalPort 3000 -ErrorAction Stop | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } } catch {}; cd \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; node server.js)",
-      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;C:\\\\Program Files\\\\Git\\\\cmd;$env:PATH\"; cd \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git add -A; git status --short)"
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;C:\\\\Program Files\\\\Git\\\\cmd;$env:PATH\"; cd \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git add -A; git status --short)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; try { Get-NetTCPConnection -LocalPort 3000 -ErrorAction Stop | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } } catch {}; Start-Sleep -Seconds 1; cd \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; node server.js)"
     ]
   }
 }

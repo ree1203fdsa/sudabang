@@ -423,6 +423,8 @@ app.put('/api/friends/accept/:id', auth, (req, res) => {
   if (!request) return res.status(404).json({ error: '친구 요청을 찾을 수 없습니다.' });
   db.prepare("UPDATE friends SET status = 'accepted' WHERE id = ?").run(req.params.id);
   createNotification(request.user_id, 'friend_accepted', '친구 수락', `${req.user.nickname}님이 친구 요청을 수락했습니다.`, '/friends');
+  checkAchievements(req.user.id);
+  checkAchievements(request.user_id);
   res.json({ message: '친구 요청을 수락했습니다.' });
 });
 
@@ -534,6 +536,8 @@ app.post('/api/posts', auth, (req, res) => {
 
   const result = db.prepare('INSERT INTO posts (user_id, title, content) VALUES (?, ?, ?)').run(req.user.id, filteredTitle, filteredContent);
   addExp(req.user.id);
+  updateMissionProgress(req.user.id, 'post');
+  checkAchievements(req.user.id);
   res.json({ message: '게시글이 작성되었습니다.', postId: result.lastInsertRowid });
 });
 
@@ -571,6 +575,7 @@ app.post('/api/posts/:id/heart', auth, (req, res) => {
 
   db.prepare('INSERT INTO post_hearts (post_id, user_id) VALUES (?, ?)').run(postId, req.user.id);
   db.prepare('UPDATE posts SET hearts = hearts + 1 WHERE id = ?').run(postId);
+  updateMissionProgress(req.user.id, 'heart');
 
   const post = db.prepare('SELECT hearts, user_id FROM posts WHERE id = ?').get(postId);
 
@@ -606,6 +611,8 @@ app.post('/api/posts/:id/comments', auth, (req, res) => {
   const result = db.prepare('INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)').run(req.params.id, req.user.id, filteredContent);
   db.prepare('UPDATE posts SET comment_count = comment_count + 1 WHERE id = ?').run(req.params.id);
   addExp(req.user.id);
+  updateMissionProgress(req.user.id, 'comment');
+  checkAchievements(req.user.id);
 
   const post = db.prepare('SELECT user_id FROM posts WHERE id = ?').get(req.params.id);
   if (post && post.user_id !== req.user.id) {
@@ -750,6 +757,8 @@ app.post('/api/attendance', auth, (req, res) => {
     }
   }
 
+  updateMissionProgress(req.user.id, 'attendance');
+  checkAchievements(req.user.id);
   res.json({ message: '출석 완료!', streak, totalDays: records.length });
 });
 
@@ -1537,6 +1546,121 @@ app.delete('/api/admin/coupons/:id', adminAuth, (req, res) => {
   res.json({ message: '쿠폰이 비활성화되었습니다.' });
 });
 
+// ==================== MISSIONS & ACHIEVEMENTS API ====================
+
+const DAILY_MISSIONS = [
+  { key: 'post', name: '게시글 작성', description: '게시글 1개 작성하기', icon: '📝', target: 1, reward: 10 },
+  { key: 'comment', name: '댓글 달기', description: '댓글 3개 달기', icon: '💬', target: 3, reward: 10 },
+  { key: 'chat', name: '채팅 보내기', description: '채팅 메시지 5개 보내기', icon: '💭', target: 5, reward: 10 },
+  { key: 'attendance', name: '출석 체크', description: '오늘 출석 체크하기', icon: '📅', target: 1, reward: 5 },
+  { key: 'heart', name: '하트 누르기', description: '게시글에 하트 2개 누르기', icon: '❤️', target: 2, reward: 5 },
+];
+
+app.get('/api/missions', auth, (req, res) => {
+  const today = new Date().toISOString().split('T')[0];
+  const missions = DAILY_MISSIONS.map(m => {
+    const prog = db.prepare('SELECT * FROM user_mission_progress WHERE user_id = ? AND mission_key = ? AND mission_date = ?').get(req.user.id, m.key, today);
+    return {
+      ...m,
+      progress: prog ? prog.progress : 0,
+      completed: prog ? prog.completed : 0,
+      claimed: prog ? prog.claimed : 0,
+    };
+  });
+  const allClaimed = missions.every(m => m.claimed);
+  res.json({ missions, allClaimed });
+});
+
+app.post('/api/missions/:key/claim', auth, (req, res) => {
+  const today = new Date().toISOString().split('T')[0];
+  const mission = DAILY_MISSIONS.find(m => m.key === req.params.key);
+  if (!mission) return res.status(404).json({ error: '미션을 찾을 수 없습니다.' });
+  const prog = db.prepare('SELECT * FROM user_mission_progress WHERE user_id = ? AND mission_key = ? AND mission_date = ?').get(req.user.id, mission.key, today);
+  if (!prog || !prog.completed) return res.status(400).json({ error: '미션을 아직 완료하지 않았습니다.' });
+  if (prog.claimed) return res.status(400).json({ error: '이미 보상을 받았습니다.' });
+  db.prepare('UPDATE user_mission_progress SET claimed = 1 WHERE id = ?').run(prog.id);
+  db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(mission.reward, req.user.id);
+  db.prepare('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)').run(
+    req.user.id, mission.reward, 'mission', `일일 미션: ${mission.name}`
+  );
+  const user = db.prepare('SELECT coins FROM users WHERE id = ?').get(req.user.id);
+  res.json({ message: `${mission.reward} 코인을 받았습니다!`, coins: user.coins });
+});
+
+function updateMissionProgress(userId, missionKey, amount = 1) {
+  const today = new Date().toISOString().split('T')[0];
+  const mission = DAILY_MISSIONS.find(m => m.key === missionKey);
+  if (!mission) return;
+  const existing = db.prepare('SELECT * FROM user_mission_progress WHERE user_id = ? AND mission_key = ? AND mission_date = ?').get(userId, missionKey, today);
+  if (!existing) {
+    const newProg = Math.min(amount, mission.target);
+    const completed = newProg >= mission.target ? 1 : 0;
+    db.prepare('INSERT INTO user_mission_progress (user_id, mission_key, progress, completed, mission_date) VALUES (?, ?, ?, ?, ?)').run(userId, missionKey, newProg, completed, today);
+  } else if (!existing.completed) {
+    const newProg = Math.min(existing.progress + amount, mission.target);
+    const completed = newProg >= mission.target ? 1 : 0;
+    db.prepare('UPDATE user_mission_progress SET progress = ?, completed = ? WHERE id = ?').run(newProg, completed, existing.id);
+  }
+}
+
+app.get('/api/achievements', auth, (req, res) => {
+  const achievements = db.prepare('SELECT * FROM achievements ORDER BY id').all();
+  const userAchs = db.prepare('SELECT achievement_id, created_at FROM user_achievements WHERE user_id = ?').all(req.user.id);
+  const userAchMap = {};
+  for (const ua of userAchs) userAchMap[ua.achievement_id] = ua.created_at;
+  const result = achievements.map(a => ({
+    ...a,
+    unlocked: !!userAchMap[a.id],
+    unlocked_at: userAchMap[a.id] || null
+  }));
+  res.json({ achievements: result });
+});
+
+function checkAchievements(userId) {
+  const achievements = db.prepare('SELECT * FROM achievements').all();
+  const userAchs = db.prepare('SELECT achievement_id FROM user_achievements WHERE user_id = ?').all(userId);
+  const unlockedSet = new Set(userAchs.map(a => a.achievement_id));
+
+  for (const ach of achievements) {
+    if (unlockedSet.has(ach.id)) continue;
+    let value = 0;
+    switch (ach.condition_type) {
+      case 'posts':
+        value = db.prepare('SELECT COUNT(*) as cnt FROM posts WHERE author_id = ? AND is_deleted = 0').get(userId).cnt;
+        break;
+      case 'comments':
+        value = db.prepare('SELECT COUNT(*) as cnt FROM comments WHERE author_id = ? AND is_deleted = 0').get(userId).cnt;
+        break;
+      case 'friends':
+        value = db.prepare('SELECT COUNT(*) as cnt FROM friends WHERE (user_id = ? OR friend_id = ?) AND status = ?').get(userId, userId, 'accepted').cnt;
+        break;
+      case 'attendance_streak': {
+        const att = db.prepare('SELECT streak FROM attendance WHERE user_id = ? ORDER BY date DESC LIMIT 1').get(userId);
+        value = att ? att.streak : 0;
+        break;
+      }
+      case 'level': {
+        const u = db.prepare('SELECT level FROM users WHERE id = ?').get(userId);
+        value = u ? u.level : 0;
+        break;
+      }
+      case 'hearts_received':
+        value = db.prepare('SELECT COUNT(*) as cnt FROM post_hearts ph JOIN posts p ON ph.post_id = p.id WHERE p.author_id = ?').get(userId).cnt;
+        break;
+    }
+    if (value >= ach.condition_value) {
+      db.prepare('INSERT OR IGNORE INTO user_achievements (user_id, achievement_id) VALUES (?, ?)').run(userId, ach.id);
+      if (ach.reward_coins > 0) {
+        db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(ach.reward_coins, userId);
+        db.prepare('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)').run(
+          userId, ach.reward_coins, 'achievement', `업적 달성: ${ach.name}`
+        );
+      }
+      createNotification(userId, 'achievement', '업적 달성!', `"${ach.name}" 업적을 달성했어요! ${ach.icon}`);
+    }
+  }
+}
+
 // ==================== SOCKET.IO ====================
 
 const onlineUsers = new Map();
@@ -1620,6 +1744,7 @@ io.on('connection', (socket) => {
     const result = db.prepare('INSERT INTO messages (room_id, user_id, content, type, reply_to) VALUES (?, ?, ?, ?, ?)').run(
       data.roomId, userId, content, data.type || 'text', data.replyTo || null
     );
+    updateMissionProgress(userId, 'chat');
 
     const message = {
       id: result.lastInsertRowid,

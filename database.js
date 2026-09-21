@@ -15,7 +15,8 @@ const ALL_TABLES = [
   'shop_items', 'user_inventory', 'notifications', 'reports', 'admin_logs',
   'heart_rewards', 'attendance_rewards', 'teacher_chat_rooms', 'teacher_messages',
   'polls', 'poll_options', 'poll_votes', 'fcm_tokens',
-  'referral_codes', 'referral_uses', 'coupons', 'coupon_uses'
+  'referral_codes', 'referral_uses', 'coupons', 'coupon_uses',
+  'achievements', 'user_achievements', 'user_mission_progress'
 ];
 
 class BetterSqlite3Compat {
@@ -655,6 +656,39 @@ async function initDatabase() {
     UNIQUE(coupon_id, user_id)
   )`);
 
+  db.exec(`CREATE TABLE IF NOT EXISTS achievements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    icon TEXT DEFAULT '🏆',
+    reward_coins INTEGER DEFAULT 0,
+    condition_type TEXT NOT NULL,
+    condition_value INTEGER DEFAULT 1
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS user_achievements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    achievement_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (achievement_id) REFERENCES achievements(id),
+    UNIQUE(user_id, achievement_id)
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS user_mission_progress (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    mission_key TEXT NOT NULL,
+    progress INTEGER DEFAULT 0,
+    completed INTEGER DEFAULT 0,
+    claimed INTEGER DEFAULT 0,
+    mission_date TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, mission_key, mission_date)
+  )`);
+
   const firebaseData = await loadFromFirebase();
   if (firebaseData) {
     for (const table of ALL_TABLES) {
@@ -696,6 +730,31 @@ async function initDatabase() {
     ];
     for (const item of items) {
       db.prepare('INSERT INTO shop_items (name, description, image, category, price) VALUES (?, ?, ?, ?, ?)').run(...item);
+    }
+  }
+
+  const achCount = db.prepare('SELECT COUNT(*) as cnt FROM achievements').get();
+  if (achCount.cnt === 0) {
+    const achs = [
+      ['first_post', '첫 게시글', '첫 번째 게시글을 작성했어요!', '📝', 10, 'posts', 1],
+      ['posts_10', '글쟁이', '게시글 10개를 작성했어요!', '✍️', 30, 'posts', 10],
+      ['posts_50', '작가님', '게시글 50개를 작성했어요!', '📖', 100, 'posts', 50],
+      ['first_comment', '첫 댓글', '첫 번째 댓글을 달았어요!', '💬', 5, 'comments', 1],
+      ['comments_50', '수다쟁이', '댓글 50개를 달았어요!', '🗣️', 50, 'comments', 50],
+      ['friends_5', '사교왕', '친구 5명을 만들었어요!', '🤝', 20, 'friends', 5],
+      ['friends_10', '인싸', '친구 10명을 만들었어요!', '🌟', 50, 'friends', 10],
+      ['friends_30', '인맥왕', '친구 30명을 만들었어요!', '👑', 150, 'friends', 30],
+      ['attendance_7', '출석 7일', '7일 연속 출석했어요!', '📅', 30, 'attendance_streak', 7],
+      ['attendance_30', '한 달 개근', '30일 연속 출석했어요!', '🔥', 100, 'attendance_streak', 30],
+      ['attendance_100', '출석의 신', '100일 연속 출석했어요!', '💎', 500, 'attendance_streak', 100],
+      ['level_5', '성장중', '레벨 5에 도달했어요!', '⬆️', 20, 'level', 5],
+      ['level_10', '중수', '레벨 10에 도달했어요!', '🎯', 50, 'level', 10],
+      ['level_30', '고수', '레벨 30에 도달했어요!', '🏅', 200, 'level', 30],
+      ['hearts_10', '인기인', '하트를 10개 받았어요!', '❤️', 30, 'hearts_received', 10],
+      ['hearts_50', '스타', '하트를 50개 받았어요!', '💖', 100, 'hearts_received', 50],
+    ];
+    for (const a of achs) {
+      db.prepare('INSERT INTO achievements (key, name, description, icon, reward_coins, condition_type, condition_value) VALUES (?, ?, ?, ?, ?, ?, ?)').run(...a);
     }
   }
 
