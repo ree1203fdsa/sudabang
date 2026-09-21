@@ -110,7 +110,7 @@ async function saveToFirebase(db) {
       if (rows.length > 0) {
         payload[table] = {};
         for (const row of rows) {
-          payload[table][String(row.id)] = row;
+          payload[table][`r_${row.id}`] = row;
         }
       } else {
         payload[table] = null;
@@ -153,17 +153,18 @@ async function loadFromFirebase() {
 
 function insertRowsFromFirebase(db, tableName, tableData) {
   if (!tableData || typeof tableData !== 'object') return;
-  const rows = Object.values(tableData).filter(r => r && typeof r === 'object');
+  const rows = Object.values(tableData).filter(r => r && typeof r === 'object' && r.id !== undefined);
   if (rows.length === 0) return;
 
-  const columns = Object.keys(rows[0]);
-  if (columns.length === 0) return;
-  const placeholders = columns.map(() => '?').join(', ');
-  const colNames = columns.join(', ');
+  const tableColumns = getTableColumns(db, tableName);
+  if (tableColumns.length === 0) return;
+
+  const placeholders = tableColumns.map(() => '?').join(', ');
+  const colNames = tableColumns.join(', ');
 
   for (const row of rows) {
     try {
-      const vals = columns.map(c => row[c] === undefined ? null : row[c]);
+      const vals = tableColumns.map(c => row[c] === undefined ? null : row[c]);
       db._db.run(`INSERT OR REPLACE INTO ${tableName} (${colNames}) VALUES (${placeholders})`, vals);
     } catch (e) {}
   }
