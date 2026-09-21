@@ -1831,6 +1831,139 @@ app.post('/api/minigame/coinflip', auth, (req, res) => {
   res.json({ result: coinResult, win, net, coins: req.user.coins });
 });
 
+// 숫자 맞추기 (1~10 중 맞추면 x5, 1차이면 x2)
+app.post('/api/minigame/numberguess', auth, (req, res) => {
+  const { guess, bet } = req.body;
+  const betAmount = parseInt(bet) || 10;
+  const guessNum = parseInt(guess);
+  if (guessNum < 1 || guessNum > 10) return res.status(400).json({ error: '1~10 사이 숫자를 선택하세요.' });
+  if (betAmount < 1 || betAmount > 500) return res.status(400).json({ error: '베팅은 1~500 코인입니다.' });
+  if (req.user.coins < betAmount) return res.status(400).json({ error: '코인이 부족합니다.' });
+
+  const answer = Math.floor(Math.random() * 10) + 1;
+  const diff = Math.abs(guessNum - answer);
+  let multiplier = 0;
+  let resultText = 'miss';
+  if (diff === 0) { multiplier = 5; resultText = 'exact'; }
+  else if (diff === 1) { multiplier = 2; resultText = 'close'; }
+  else if (diff === 2) { multiplier = 1; resultText = 'near'; }
+
+  const reward = betAmount * multiplier;
+  const net = reward - betAmount;
+  db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(net, req.user.id);
+  db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(
+    req.user.id, net, `숫자 맞추기 ${resultText} (정답:${answer}, 선택:${guessNum})`
+  );
+  db.prepare('INSERT INTO minigame_records (user_id, game_type, bet_amount, result, reward) VALUES (?, ?, ?, ?, ?)').run(
+    req.user.id, 'numberguess', betAmount, resultText, reward
+  );
+  req.user.coins += net;
+  res.json({ answer, guess: guessNum, result: resultText, multiplier, reward, new_balance: req.user.coins });
+});
+
+// 주사위 (높/낮 맞추기, 같으면 x5)
+app.post('/api/minigame/dice', auth, (req, res) => {
+  const { choice, bet } = req.body;
+  const betAmount = parseInt(bet) || 10;
+  if (!['high', 'low', 'same'].includes(choice)) return res.status(400).json({ error: '잘못된 선택입니다.' });
+  if (betAmount < 1 || betAmount > 500) return res.status(400).json({ error: '베팅은 1~500 코인입니다.' });
+  if (req.user.coins < betAmount) return res.status(400).json({ error: '코인이 부족합니다.' });
+
+  const die1 = Math.floor(Math.random() * 6) + 1;
+  const die2 = Math.floor(Math.random() * 6) + 1;
+  let actual;
+  if (die1 > die2) actual = 'high';
+  else if (die1 < die2) actual = 'low';
+  else actual = 'same';
+
+  let win = choice === actual;
+  let multiplier = 0;
+  if (win) multiplier = actual === 'same' ? 5 : 2;
+
+  const reward = betAmount * multiplier;
+  const net = reward - betAmount;
+  db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(net, req.user.id);
+  db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(
+    req.user.id, net, `주사위 ${win ? '승리' : '패배'} (${die1} vs ${die2})`
+  );
+  db.prepare('INSERT INTO minigame_records (user_id, game_type, bet_amount, result, reward) VALUES (?, ?, ?, ?, ?)').run(
+    req.user.id, 'dice', betAmount, win ? 'win' : 'lose', reward
+  );
+  req.user.coins += net;
+  res.json({ die1, die2, actual, win, multiplier, reward, new_balance: req.user.coins });
+});
+
+// 카드 뽑기 (높은 카드 승리)
+app.post('/api/minigame/cardpick', auth, (req, res) => {
+  const { bet } = req.body;
+  const betAmount = parseInt(bet) || 10;
+  if (betAmount < 1 || betAmount > 500) return res.status(400).json({ error: '베팅은 1~500 코인입니다.' });
+  if (req.user.coins < betAmount) return res.status(400).json({ error: '코인이 부족합니다.' });
+
+  const cards = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const suits = ['spades','hearts','diamonds','clubs'];
+  const myIdx = Math.floor(Math.random() * 13);
+  const cpuIdx = Math.floor(Math.random() * 13);
+  const mySuit = suits[Math.floor(Math.random() * 4)];
+  const cpuSuit = suits[Math.floor(Math.random() * 4)];
+
+  let result;
+  if (myIdx > cpuIdx) result = 'win';
+  else if (myIdx < cpuIdx) result = 'lose';
+  else result = 'draw';
+
+  let net = 0;
+  if (result === 'win') net = betAmount;
+  else if (result === 'lose') net = -betAmount;
+
+  db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(net, req.user.id);
+  if (net !== 0) {
+    db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(
+      req.user.id, net, `카드 뽑기 ${result === 'win' ? '승리' : '패배'} (${cards[myIdx]} vs ${cards[cpuIdx]})`
+    );
+  }
+  db.prepare('INSERT INTO minigame_records (user_id, game_type, bet_amount, result, reward) VALUES (?, ?, ?, ?, ?)').run(
+    req.user.id, 'cardpick', betAmount, result, result === 'win' ? betAmount * 2 : 0
+  );
+  req.user.coins += net;
+  res.json({ myCard: cards[myIdx], mySuit, cpuCard: cards[cpuIdx], cpuSuit, result, reward: result === 'win' ? betAmount * 2 : 0, new_balance: req.user.coins });
+});
+
+// 폭탄 해제 (5개 상자 중 1개 폭탄, 나머지 보상)
+app.post('/api/minigame/bomb', auth, (req, res) => {
+  const { pick, bet } = req.body;
+  const betAmount = parseInt(bet) || 10;
+  const pickNum = parseInt(pick);
+  if (pickNum < 1 || pickNum > 5) return res.status(400).json({ error: '1~5 사이 상자를 선택하세요.' });
+  if (betAmount < 1 || betAmount > 500) return res.status(400).json({ error: '베팅은 1~500 코인입니다.' });
+  if (req.user.coins < betAmount) return res.status(400).json({ error: '코인이 부족합니다.' });
+
+  const bombPos = Math.floor(Math.random() * 5) + 1;
+  const prizes = [1.5, 2, 2.5, 3];
+  const boxes = [];
+  let prizeIdx = 0;
+  for (let i = 1; i <= 5; i++) {
+    if (i === bombPos) boxes.push({ box: i, type: 'bomb', multiplier: 0 });
+    else { boxes.push({ box: i, type: 'prize', multiplier: prizes[prizeIdx % prizes.length] }); prizeIdx++; }
+  }
+
+  const picked = boxes.find(b => b.box === pickNum);
+  const isBomb = picked.type === 'bomb';
+  const multiplier = isBomb ? 0 : picked.multiplier;
+  const reward = Math.floor(betAmount * multiplier);
+  const net = reward - betAmount;
+
+  db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(net, req.user.id);
+  db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(
+    req.user.id, net, `폭탄 해제 ${isBomb ? '폭발!' : '성공'} (상자 ${pickNum})`
+  );
+  db.prepare('INSERT INTO minigame_records (user_id, game_type, bet_amount, result, reward) VALUES (?, ?, ?, ?, ?)').run(
+    req.user.id, 'bomb', betAmount, isBomb ? 'bomb' : 'safe', reward
+  );
+  req.user.coins += net;
+  res.json({ bombPos, boxes, picked: pickNum, isBomb, multiplier, reward, new_balance: req.user.coins });
+});
+
 app.get('/api/minigame/history', auth, (req, res) => {
   const records = db.prepare('SELECT * FROM minigame_records WHERE user_id = ? ORDER BY created_at DESC LIMIT 30').all(req.user.id);
   res.json({ records });

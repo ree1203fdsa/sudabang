@@ -1667,21 +1667,41 @@ const App = {
           <label><input type="radio" name="mg-bet" value="500"> 500</label>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
-        <div class="card" style="text-align:center;padding:20px;cursor:pointer" onclick="App.playMinigame('roulette')">
-          <div style="font-size:40px;margin-bottom:8px">🎰</div>
-          <b>룰렛</b>
-          <p style="font-size:12px;color:var(--text-secondary)">최대 5배!</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        <div class="card" style="text-align:center;padding:16px;cursor:pointer" onclick="App.playMinigame('roulette')">
+          <div style="font-size:32px;margin-bottom:6px">🎰</div>
+          <b style="font-size:13px">룰렛</b>
+          <p style="font-size:11px;color:var(--text-secondary)">최대 5배!</p>
         </div>
-        <div class="card" style="text-align:center;padding:20px;cursor:pointer" onclick="App.playMinigame('rps')">
-          <div style="font-size:40px;margin-bottom:8px">✊</div>
-          <b>가위바위보</b>
-          <p style="font-size:12px;color:var(--text-secondary)">이기면 2배</p>
+        <div class="card" style="text-align:center;padding:16px;cursor:pointer" onclick="App.playMinigame('rps')">
+          <div style="font-size:32px;margin-bottom:6px">✊</div>
+          <b style="font-size:13px">가위바위보</b>
+          <p style="font-size:11px;color:var(--text-secondary)">이기면 2배</p>
         </div>
-        <div class="card" style="text-align:center;padding:20px;cursor:pointer" onclick="App.playMinigame('coinflip')">
-          <div style="font-size:40px;margin-bottom:8px">🪙</div>
-          <b>동전던지기</b>
-          <p style="font-size:12px;color:var(--text-secondary)">앞뒤 맞추기</p>
+        <div class="card" style="text-align:center;padding:16px;cursor:pointer" onclick="App.playMinigame('coinflip')">
+          <div style="font-size:32px;margin-bottom:6px">🪙</div>
+          <b style="font-size:13px">동전던지기</b>
+          <p style="font-size:11px;color:var(--text-secondary)">앞뒤 맞추기</p>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;cursor:pointer" onclick="App.playMinigame('numberguess')">
+          <div style="font-size:32px;margin-bottom:6px">🔢</div>
+          <b style="font-size:13px">숫자 맞추기</b>
+          <p style="font-size:11px;color:var(--text-secondary)">정확히 x5!</p>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;cursor:pointer" onclick="App.playMinigame('dice')">
+          <div style="font-size:32px;margin-bottom:6px">🎲</div>
+          <b style="font-size:13px">주사위</b>
+          <p style="font-size:11px;color:var(--text-secondary)">높낮이 맞추기</p>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;cursor:pointer" onclick="App.playMinigame('cardpick')">
+          <div style="font-size:32px;margin-bottom:6px">🃏</div>
+          <b style="font-size:13px">카드 뽑기</b>
+          <p style="font-size:11px;color:var(--text-secondary)">높은 카드 승!</p>
+        </div>
+        <div class="card" style="text-align:center;padding:16px;cursor:pointer;grid-column:2" onclick="App.playMinigame('bomb')">
+          <div style="font-size:32px;margin-bottom:6px">💣</div>
+          <b style="font-size:13px">폭탄 해제</b>
+          <p style="font-size:11px;color:var(--text-secondary)">최대 3배!</p>
         </div>
       </div>
       <div class="card" id="mg-result" style="display:none;text-align:center;padding:20px"></div>
@@ -1698,29 +1718,37 @@ const App = {
     resultDiv.innerHTML = '<p>게임 중...</p>';
 
     let body = { bet };
+    const mgWaitPick = (html) => new Promise(resolve => {
+      resultDiv.innerHTML = html;
+      const check = setInterval(() => {
+        if (resultDiv.dataset.resolved) { clearInterval(check); resolve(resultDiv.dataset.pick); }
+      }, 100);
+    });
+
     if (gameType === 'rps') {
-      const choices = ['rock', 'paper', 'scissors'];
-      const labels = ['✊ 바위', '✋ 보', '✌️ 가위'];
-      const pick = await new Promise(resolve => {
-        resultDiv.innerHTML = `<p>선택하세요!</p><div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
-          ${choices.map((c, i) => `<button class="btn" onclick="this.parentElement.dataset.pick='${c}';document.getElementById('mg-result').dataset.resolved='1'">${labels[i]}</button>`).join('')}
-        </div>`;
-        const check = setInterval(() => {
-          if (resultDiv.dataset.resolved) { clearInterval(check); resolve(resultDiv.querySelector('[data-pick]')?.dataset.pick || 'rock'); }
-        }, 100);
-      });
-      body.choice = pick;
+      body.choice = await mgWaitPick(`<p>선택하세요!</p><div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
+        ${[['rock','✊ 바위'],['paper','✋ 보'],['scissors','✌️ 가위']].map(([v,l]) =>
+          `<button class="btn" onclick="let r=document.getElementById('mg-result');r.dataset.pick='${v}';r.dataset.resolved='1'">${l}</button>`).join('')}
+      </div>`);
     } else if (gameType === 'coinflip') {
-      const pick = await new Promise(resolve => {
-        resultDiv.innerHTML = `<p>어느 면?</p><div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
-          <button class="btn" onclick="document.getElementById('mg-result').dataset.pick='heads';document.getElementById('mg-result').dataset.resolved='1'">앞면</button>
-          <button class="btn" onclick="document.getElementById('mg-result').dataset.pick='tails';document.getElementById('mg-result').dataset.resolved='1'">뒷면</button>
-        </div>`;
-        const check = setInterval(() => {
-          if (resultDiv.dataset.resolved) { clearInterval(check); resolve(resultDiv.dataset.pick || 'heads'); }
-        }, 100);
-      });
-      body.choice = pick;
+      body.choice = await mgWaitPick(`<p>어느 면?</p><div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
+        <button class="btn" onclick="let r=document.getElementById('mg-result');r.dataset.pick='heads';r.dataset.resolved='1'">앞면</button>
+        <button class="btn" onclick="let r=document.getElementById('mg-result');r.dataset.pick='tails';r.dataset.resolved='1'">뒷면</button>
+      </div>`);
+    } else if (gameType === 'numberguess') {
+      body.guess = await mgWaitPick(`<p>1~10 숫자를 맞춰보세요!</p><div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px">
+        ${Array.from({length:10},(_,i)=>`<button class="btn" style="min-width:42px" onclick="let r=document.getElementById('mg-result');r.dataset.pick='${i+1}';r.dataset.resolved='1'">${i+1}</button>`).join('')}
+      </div><p style="font-size:12px;color:var(--text-secondary);margin-top:8px">정확히 맞추면 x5 | 1차이 x2 | 2차이 x1</p>`);
+    } else if (gameType === 'dice') {
+      body.choice = await mgWaitPick(`<p>🎲 첫번째 주사위가 두번째보다?</p><div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
+        <button class="btn" onclick="let r=document.getElementById('mg-result');r.dataset.pick='high';r.dataset.resolved='1'">⬆️ 높다</button>
+        <button class="btn" onclick="let r=document.getElementById('mg-result');r.dataset.pick='same';r.dataset.resolved='1'">🟰 같다 (x5)</button>
+        <button class="btn" onclick="let r=document.getElementById('mg-result');r.dataset.pick='low';r.dataset.resolved='1'">⬇️ 낮다</button>
+      </div>`);
+    } else if (gameType === 'bomb') {
+      body.pick = await mgWaitPick(`<p>💣 상자 5개 중 1개에 폭탄! 골라보세요</p><div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
+        ${Array.from({length:5},(_,i)=>`<button class="btn" style="font-size:24px;padding:12px 16px" onclick="let r=document.getElementById('mg-result');r.dataset.pick='${i+1}';r.dataset.resolved='1'">📦</button>`).join('')}
+      </div><p style="font-size:12px;color:var(--text-secondary);margin-top:8px">안전한 상자: x1.5~x3 보상!</p>`);
     }
 
     delete resultDiv.dataset.resolved;
@@ -1732,17 +1760,24 @@ const App = {
       const emoji = won ? '🎉' : '😢';
       let detail = '';
       if (gameType === 'roulette') detail = `배율: x${data.result}`;
-      else if (gameType === 'rps') detail = `상대: ${data.computer_choice === 'rock' ? '✊' : data.computer_choice === 'paper' ? '✋' : '✌️'}`;
-      else if (gameType === 'coinflip') detail = `결과: ${data.coin_result === 'heads' ? '앞면' : '뒷면'}`;
+      else if (gameType === 'rps') detail = `상대: ${data.cpuChoice === 'rock' ? '✊' : data.cpuChoice === 'paper' ? '✋' : '✌️'}`;
+      else if (gameType === 'coinflip') detail = `결과: ${data.result === 'heads' ? '앞면' : '뒷면'}`;
+      else if (gameType === 'numberguess') detail = `정답: ${data.answer} (내 선택: ${data.guess}) ${data.result === 'exact' ? '정확!' : data.result === 'close' ? '근접!' : data.result === 'near' ? '아깝다!' : '빗나감'}`;
+      else if (gameType === 'dice') detail = `🎲 ${data.die1} vs ${data.die2} ${data.win ? (data.actual === 'same' ? '같다! x5' : '맞았다!') : '틀렸다!'}`;
+      else if (gameType === 'cardpick') detail = `내 카드: ${data.myCard} vs 상대: ${data.cpuCard}`;
+      else if (gameType === 'bomb') {
+        const boxEmojis = data.boxes.map(b => b.box === data.picked ? (data.isBomb ? '💥' : '🎁') : (b.type === 'bomb' ? '💣' : '📦')).join(' ');
+        detail = `${boxEmojis}<br>${data.isBomb ? '폭탄이었어요!' : `x${data.multiplier} 보상!`}`;
+      }
 
       resultDiv.innerHTML = `
-        <div style="font-size:48px">${emoji}</div>
-        <p style="font-size:18px;font-weight:bold;color:${won ? '#2ED573' : '#FF4757'}">${won ? '승리!' : '패배!'}</p>
+        <div style="font-size:48px">${gameType === 'bomb' ? (data.isBomb ? '💥' : '🎁') : emoji}</div>
+        <p style="font-size:18px;font-weight:bold;color:${won ? '#2ED573' : '#FF4757'}">${won ? '승리!' : (data.result === 'draw' ? '무승부' : '패배!')}</p>
         <p>${detail}</p>
-        <p>${won ? '+' : ''}${data.reward} 코인</p>
+        <p style="font-size:16px">${won ? '+' : ''}${data.reward || 0} 코인</p>
       `;
-      document.getElementById('mg-coins').textContent = data.new_balance;
-      this.user.coins = data.new_balance;
+      document.getElementById('mg-coins').textContent = data.new_balance || data.coins;
+      this.user.coins = data.new_balance || data.coins;
       this.loadMinigameHistory();
     } catch (e) {
       resultDiv.innerHTML = `<p style="color:#FF4757">${e.message}</p>`;
@@ -1754,7 +1789,7 @@ const App = {
       const data = await this.api('/api/minigame/history');
       const histDiv = document.getElementById('mg-history');
       if (!histDiv) return;
-      const gameLabels = { roulette: '🎰 룰렛', rps: '✊ 가위바위보', coinflip: '🪙 동전' };
+      const gameLabels = { roulette: '🎰 룰렛', rps: '✊ 가위바위보', coinflip: '🪙 동전', numberguess: '🔢 숫자', dice: '🎲 주사위', cardpick: '🃏 카드', bomb: '💣 폭탄' };
       histDiv.innerHTML = data.records.length ? data.records.map(r => `
         <div class="card" style="padding:12px;display:flex;justify-content:space-between;align-items:center">
           <div>
@@ -2121,6 +2156,10 @@ const App = {
         <div class="settings-item">
           <div class="settings-item-left"><i class="fas fa-${this.user.theme === 'dark' ? 'moon' : 'sun'}"></i><span class="settings-item-label">${this.user.theme === 'dark' ? '다크 모드' : '라이트 모드'}</span></div>
           <div class="toggle ${this.user.theme === 'dark' ? 'active' : ''}" onclick="App.toggleTheme()"></div>
+        </div>
+        <div class="settings-item" onclick="App.showWallpaperPicker()">
+          <div class="settings-item-left"><i class="fas fa-image" style="color:#00B894"></i><span class="settings-item-label">배경화면 설정</span></div>
+          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
         </div>
         <div class="settings-item" onclick="App.navigate('gallery')">
           <div class="settings-item-left"><i class="fas fa-images" style="color:#1E90FF"></i><span class="settings-item-label">갤러리</span></div>
