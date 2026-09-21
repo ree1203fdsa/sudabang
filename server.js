@@ -78,14 +78,15 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// POST/PUT/DELETE 요청 후 자동 Firebase 저장
+// POST/PUT/DELETE 요청 시 응답 전에 Firebase 저장
 app.use((req, res, next) => {
   if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
     const origJson = res.json.bind(res);
     res.json = function(data) {
-      origJson(data);
       if (db && db._dirty) {
-        saveToFirebase(db).catch(() => {});
+        saveToFirebase(db).then(() => origJson(data)).catch(() => origJson(data));
+      } else {
+        origJson(data);
       }
     };
   }
