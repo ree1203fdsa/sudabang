@@ -60,6 +60,41 @@
   }
 }
 
+/* ==================== 리샘 브랜드 테마 ==================== */
+:root[data-brand="resam"] {
+  --primary: #F5B731;
+  --primary-light: #FFD166;
+  --primary-dark: #E0A020;
+  --primary-bg: #FFF8E1;
+  --bg: #FFFDF5;
+  --bg-card: #FFFFFF;
+  --bg-input: #FFFEF8;
+  --coin: #F5B731;
+  --shadow: 0 2px 12px rgba(245, 183, 49, 0.08);
+  --shadow-md: 0 4px 20px rgba(245, 183, 49, 0.12);
+  --shadow-lg: 0 8px 32px rgba(245, 183, 49, 0.15);
+}
+:root[data-brand="resam"][data-theme="dark"] {
+  --primary: #F5B731;
+  --primary-light: #FFD166;
+  --primary-dark: #E0A020;
+  --primary-bg: #3D3520;
+  --bg: #1E1C14;
+  --bg-card: #2A2820;
+  --bg-input: #33312A;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-brand="resam"]:not([data-theme="light"]) {
+    --primary: #F5B731;
+    --primary-light: #FFD166;
+    --primary-dark: #E0A020;
+    --primary-bg: #3D3520;
+    --bg: #1E1C14;
+    --bg-card: #2A2820;
+    --bg-input: #33312A;
+  }
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {

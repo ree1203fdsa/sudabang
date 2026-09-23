@@ -217,6 +217,7 @@ async function initDatabase() {
       exp INTEGER DEFAULT 0,
       coins INTEGER DEFAULT 0,
       role TEXT DEFAULT 'user',
+      brand TEXT DEFAULT '',
       theme TEXT DEFAULT 'light',
       is_online INTEGER DEFAULT 0,
       is_banned INTEGER DEFAULT 0,
@@ -783,6 +784,9 @@ async function initDatabase() {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id)
   )`);
+
+  // 기존 DB 마이그레이션: brand 컬럼 추가
+  try { db.exec("ALTER TABLE users ADD COLUMN brand TEXT DEFAULT ''"); } catch(e) {}
 
   const firebaseData = await loadFromFirebase();
   if (firebaseData) {

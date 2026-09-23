@@ -14,6 +14,7 @@ const App = {
         const res = await this.api('/api/auth/me');
         this.user = res.user;
         this.applyTheme(this.user.theme);
+        this.applyBrand();
         this.connectSocket();
         this.render();
         this.loadNotifCount();
@@ -31,6 +32,18 @@ const App = {
   applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme || 'light');
   },
+
+  applyBrand() {
+    if (this.user && this.user.brand === 'resam') {
+      document.documentElement.setAttribute('data-brand', 'resam');
+    } else {
+      document.documentElement.removeAttribute('data-brand');
+    }
+  },
+
+  getBrandName() { return this.user?.brand === 'resam' ? '리샘' : '수다방'; },
+  getCoinName() { return this.user?.brand === 'resam' ? '리샘 코인' : '코인'; },
+  getChatLabel() { return this.user?.brand === 'resam' ? '리샘' : '수다방'; },
 
   // ==================== API ====================
   async api(url, options = {}) {
@@ -268,6 +281,7 @@ const App = {
       localStorage.setItem('token', data.token);
       this.user = data.user;
       this.applyTheme(this.user.theme);
+      this.applyBrand();
       this.connectSocket();
       this.render();
       this.loadNotifCount();
@@ -308,6 +322,7 @@ const App = {
     localStorage.removeItem('token');
     if (this.socket) this.socket.disconnect();
     this.user = null;
+    document.documentElement.removeAttribute('data-brand');
     this.renderAuth();
   },
 
@@ -328,7 +343,7 @@ const App = {
       <div class="app-layout">
         <div class="top-header">
           <div class="top-header-logo" onclick="App.navigate('home')" style="cursor:pointer">
-            <img src="logo.webp" alt="수다방" style="width:32px;height:32px;object-fit:contain;border-radius:6px"> 수다방
+            <img src="logo.webp" alt="${this.getBrandName()}" style="width:32px;height:32px;object-fit:contain;border-radius:6px"> ${this.getBrandName()}
           </div>
           <div class="top-header-right">
             <div class="search-box">
@@ -348,7 +363,7 @@ const App = {
             <i class="fas fa-home"></i><span>홈</span>
           </div>
           <div class="bottom-nav-item" data-page="rooms">
-            <i class="fas fa-comments"></i><span>수다방</span>
+            <i class="fas fa-comments"></i><span>${this.getChatLabel()}</span>
           </div>
           <div class="bottom-nav-item" data-page="${middlePage}">
             <div class="bottom-nav-center"><i class="fas ${middleIcon}"></i></div>
@@ -485,7 +500,7 @@ const App = {
       <!-- Welcome Banner -->
       <div class="welcome-banner">
         <h2>${greeting}</h2>
-        <p>${this.escapeHtml(this.user.nickname)}님, 오늘도 즐거운 수다방 되세요 🐱</p>
+        <p>${this.escapeHtml(this.user.nickname)}님, 오늘도 즐거운 ${this.getBrandName()} 되세요 🐱</p>
         <div class="welcome-mascot"><img src="logo.webp" alt="" style="width:80px;height:80px;object-fit:contain"></div>
       </div>
 
@@ -500,7 +515,7 @@ const App = {
         </div>
         <div class="coin-box">
           <div class="coin-amount">${this.user.coins}</div>
-          <div class="coin-label">코인</div>
+          <div class="coin-label">${this.getCoinName()}</div>
         </div>
       </div>
 
@@ -515,7 +530,7 @@ const App = {
         <div class="attendance-box" onclick="App.navigate('shop')" style="cursor:pointer">
           <div class="attendance-icon">🛍️</div>
           <div style="font-size:14px;font-weight:700">상점</div>
-          <div class="attendance-text">코인으로 아이템 구매</div>
+          <div class="attendance-text">${this.getCoinName()}으로 아이템 구매</div>
           <button class="attendance-btn" style="background:var(--secondary)">둘러보기</button>
         </div>
       </div>
@@ -645,7 +660,7 @@ const App = {
         document.getElementById('home-rooms').innerHTML = `
           <div class="card">
             <div class="card-header">
-              <div class="card-title"><i class="fas fa-door-open" style="color:var(--primary)"></i> 인기 수다방</div>
+              <div class="card-title"><i class="fas fa-door-open" style="color:var(--primary)"></i> 인기 ${this.getChatLabel()}</div>
               <div class="card-more" onclick="App.navigate('rooms')">더보기 <i class="fas fa-chevron-right"></i></div>
             </div>
             <div class="rooms-scroll">
@@ -713,7 +728,7 @@ const App = {
       const roomsData = await this.api('/api/rooms/my');
       const rooms = roomsData.rooms;
       if (rooms.length === 0) {
-        content.innerHTML = '<div class="empty-state" style="padding:48px"><i class="fas fa-comments"></i><p>참여 중인 채팅방이 없습니다.<br>수다방에서 채팅방에 입장해보세요!</p></div>';
+        content.innerHTML = `<div class="empty-state" style="padding:48px"><i class="fas fa-comments"></i><p>참여 중인 채팅방이 없습니다.<br>${this.getChatLabel()}에서 채팅방에 입장해보세요!</p></div>`;
         content.style.padding = '16px';
         content.style.maxWidth = '600px';
         return;
@@ -946,7 +961,7 @@ const App = {
       const data = await this.api('/api/rooms');
       content.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <div class="page-title" style="margin-bottom:0"><i class="fas fa-door-open page-title-icon" style="color:var(--primary)"></i> 수다방</div>
+          <div class="page-title" style="margin-bottom:0"><i class="fas fa-door-open page-title-icon" style="color:var(--primary)"></i> ${this.getChatLabel()}</div>
           ${this.user.level >= 19 || this.user.role === 'admin' ? '<button class="btn btn-primary btn-small btn-pill" onclick="App.showCreateRoom()"><i class="fas fa-plus"></i> 방 만들기</button>' : ''}
         </div>
         <div class="tabs">
@@ -966,7 +981,7 @@ const App = {
               <span class="room-type-badge badge-${r.type}">${r.type === 'public' ? '공개' : r.type === 'private' ? '비공개' : '비밀번호'}</span>
             </div>
           `).join('')}
-          ${data.rooms.length === 0 ? '<div class="empty-state"><i class="fas fa-door-open"></i><p>수다방이 없습니다.</p></div>' : ''}
+          ${data.rooms.length === 0 ? `<div class="empty-state"><i class="fas fa-door-open"></i><p>${this.getChatLabel()}이 없습니다.</p></div>` : ''}
         </div>
       `;
     } catch (e) { content.innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
@@ -981,7 +996,7 @@ const App = {
   },
 
   showCreateRoom() {
-    this.showModal('수다방 만들기', `
+    this.showModal(`${this.getChatLabel()} 만들기`, `
       <div class="form-group"><label class="form-label">방 이름</label><input type="text" class="form-input" id="room-name" placeholder="방 이름"></div>
       <div class="form-group"><label class="form-label">설명</label><input type="text" class="form-input" id="room-desc" placeholder="방 설명"></div>
       <div class="form-group">
@@ -996,7 +1011,7 @@ const App = {
         <label class="form-label">비밀번호</label>
         <input type="text" class="form-input" id="room-password" placeholder="비밀번호">
       </div>
-      <p style="font-size:13px;color:var(--warning);margin-bottom:16px"><i class="fas fa-coins"></i> 10코인이 차감됩니다 (보유: ${this.user.coins}코인)</p>
+      <p style="font-size:13px;color:var(--warning);margin-bottom:16px"><i class="fas fa-coins"></i> 10${this.getCoinName()}이 차감됩니다 (보유: ${this.user.coins}${this.getCoinName()})</p>
     `, async () => {
       try {
         const data = await this.api('/api/rooms', { method: 'POST', body: {
@@ -1027,7 +1042,7 @@ const App = {
         } catch (e) { this.showToast(e.message, 'error'); }
       });
     } else if (type === 'private') {
-      this.showToast('비공개 수다방입니다. 초대가 필요합니다.', 'warning');
+      this.showToast(`비공개 ${this.getChatLabel()}입니다. 초대가 필요합니다.`, 'warning');
     } else {
       try {
         await this.api(`/api/rooms/${roomId}/join`, { method: 'POST' });
@@ -1473,7 +1488,7 @@ const App = {
           </div>
           <h3 style="margin-bottom:12px;font-size:15px">${year}년 ${month + 1}월</h3>
           ${calendarHtml}
-          <p style="margin-top:16px;font-size:13px;color:var(--text-muted)"><i class="fas fa-info-circle"></i> 10일 연속 출석 시 100코인 보상!</p>
+          <p style="margin-top:16px;font-size:13px;color:var(--text-muted)"><i class="fas fa-info-circle"></i> 10일 연속 출석 시 100${this.getCoinName()} 보상!</p>
         </div>
       `;
     } catch (e) { content.innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
@@ -1627,7 +1642,7 @@ const App = {
             <div class="profile-stat"><div class="profile-stat-value">${u.stats.heartCount}</div><div class="profile-stat-label">하트</div></div>
             <div class="profile-stat"><div class="profile-stat-value">${u.stats.friendCount}</div><div class="profile-stat-label">친구</div></div>
             <div class="profile-stat"><div class="profile-stat-value">${u.stats.attendanceCount}</div><div class="profile-stat-label">출석</div></div>
-            ${isMe ? `<div class="profile-stat"><div class="profile-stat-value">${this.user.coins}</div><div class="profile-stat-label">코인</div></div>` : ''}
+            ${isMe ? `<div class="profile-stat"><div class="profile-stat-value">${this.user.coins}</div><div class="profile-stat-label">${this.getCoinName()}</div></div>` : ''}
           </div>
         </div>
         ${!isMe ? `
@@ -1639,7 +1654,7 @@ const App = {
           </div>
         ` : `
           <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-            <button class="btn btn-secondary btn-small btn-pill" onclick="App.navigate('coins')"><i class="fas fa-coins"></i> 코인 내역</button>
+            <button class="btn btn-secondary btn-small btn-pill" onclick="App.navigate('coins')"><i class="fas fa-coins"></i> ${this.getCoinName()} 내역</button>
             <button class="btn btn-secondary btn-small btn-pill" onclick="App.navigate('inventory')"><i class="fas fa-box"></i> 보관함</button>
             <button class="btn btn-secondary btn-small btn-pill" onclick="App.navigate('settings')"><i class="fas fa-cog"></i> 설정</button>
           </div>
@@ -1664,10 +1679,10 @@ const App = {
       content.innerHTML = `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
           <button class="page-back" onclick="App.navigate('profile')"><i class="fas fa-arrow-left"></i></button>
-          <div class="page-title" style="margin-bottom:0">코인 내역</div>
+          <div class="page-title" style="margin-bottom:0">${this.getCoinName()} 내역</div>
         </div>
         <div class="card" style="text-align:center;margin-bottom:16px">
-          <div style="font-size:14px;color:var(--text-muted)">보유 코인</div>
+          <div style="font-size:14px;color:var(--text-muted)">보유 ${this.getCoinName()}</div>
           <div style="font-size:36px;font-weight:800;color:var(--coin)"><i class="fas fa-coins"></i> ${data.coins}</div>
         </div>
         <div class="card" style="padding:0 16px">
@@ -1692,7 +1707,7 @@ const App = {
     content.innerHTML = `
       <div class="page-title"><i class="fas fa-gamepad page-title-icon" style="color:#FF6B9D"></i> 미니게임</div>
       <div class="card" style="text-align:center;padding:20px">
-        <p style="margin-bottom:8px">보유 코인: <b id="mg-coins">${this.user.coins || 0}</b></p>
+        <p style="margin-bottom:8px">보유 ${this.getCoinName()}: <b id="mg-coins">${this.user.coins || 0}</b></p>
         <div style="display:flex;gap:8px;margin-bottom:12px;justify-content:center">
           <label><input type="radio" name="mg-bet" value="10" checked> 10</label>
           <label><input type="radio" name="mg-bet" value="50"> 50</label>
@@ -1807,7 +1822,7 @@ const App = {
         <div style="font-size:48px">${gameType === 'bomb' ? (data.isBomb ? '💥' : '🎁') : emoji}</div>
         <p style="font-size:18px;font-weight:bold;color:${won ? '#2ED573' : '#FF4757'}">${won ? '승리!' : (data.result === 'draw' ? '무승부' : '패배!')}</p>
         <p>${detail}</p>
-        <p style="font-size:16px">${won ? '+' : ''}${data.reward || 0} 코인</p>
+        <p style="font-size:16px">${won ? '+' : ''}${data.reward || 0} ${this.getCoinName()}</p>
       `;
       document.getElementById('mg-coins').textContent = data.new_balance || data.coins;
       this.user.coins = data.new_balance || data.coins;
@@ -1985,7 +2000,7 @@ const App = {
             <div>
               <b>Lv.${r.level}</b>
               <div style="font-size:13px;color:var(--text-secondary)">
-                <i class="fas fa-coins" style="color:#FFD700"></i> ${r.coins} 코인
+                <i class="fas fa-coins" style="color:#FFD700"></i> ${r.coins} ${this.getCoinName()}
                 ${r.title ? `· <i class="fas fa-crown" style="color:#E040FB"></i> "${r.title}" 칭호` : ''}
               </div>
             </div>
@@ -2004,7 +2019,7 @@ const App = {
     try {
       const data = await this.api(`/api/level-rewards/${level}/claim`, { method: 'POST' });
       this.user.coins = data.new_coins;
-      this.showToast(`보상을 받았습니다! +${data.reward_coins} 코인`);
+      this.showToast(`보상을 받았습니다! +${data.reward_coins} ${this.getCoinName()}`);
       this.renderLevelRewards();
     } catch (e) { alert(e.message); }
   },
@@ -2266,7 +2281,7 @@ const App = {
         <img class="profile-card-avatar" src="${this.user.profile_image}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%236C63FF%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22 fill=%22white%22>👤</text></svg>'">
         <div class="profile-card-info">
           <div class="profile-card-name">${this.escapeHtml(this.user.nickname)}</div>
-          <div class="profile-card-level">Lv.${this.user.level} · ${this.user.coins} 코인</div>
+          <div class="profile-card-level">Lv.${this.user.level} · ${this.user.coins} ${this.getCoinName()}</div>
         </div>
         <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
       </div>
@@ -3045,7 +3060,7 @@ const App = {
               <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.progress}/${m.target}</div>
             </div>
             <div style="text-align:center;min-width:70px">
-              <div style="font-size:12px;color:var(--warning);font-weight:700">+${m.reward} 코인</div>
+              <div style="font-size:12px;color:var(--warning);font-weight:700">+${m.reward} ${this.getCoinName()}</div>
               ${m.claimed ? '<span class="badge badge-user" style="margin-top:4px">완료</span>'
                 : m.completed ? `<button class="btn btn-success btn-small" style="margin-top:4px" onclick="App.claimMission('${m.key}')">받기</button>`
                 : '<span style="font-size:11px;color:var(--text-muted)">진행중</span>'}
@@ -3084,7 +3099,7 @@ const App = {
               <div style="font-size:36px">${a.icon}</div>
               <div style="font-weight:700;font-size:14px;margin-top:8px">${this.escapeHtml(a.name)}</div>
               <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${this.escapeHtml(a.description)}</div>
-              ${a.reward_coins > 0 ? `<div style="font-size:11px;color:var(--warning);margin-top:4px">+${a.reward_coins} 코인</div>` : ''}
+              ${a.reward_coins > 0 ? `<div style="font-size:11px;color:var(--warning);margin-top:4px">+${a.reward_coins} ${this.getCoinName()}</div>` : ''}
               ${a.unlocked ? '<div style="font-size:11px;color:var(--success);margin-top:4px"><i class="fas fa-check-circle"></i> 달성!</div>' : ''}
             </div>
           `).join('')}

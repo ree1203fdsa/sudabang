@@ -236,10 +236,14 @@ app.post('/api/auth/register', upload.single('profileImage'), (req, res) => {
     const profileImage = req.file ? `/uploads/${req.file.filename}` : '/default-avatar.png';
     const userRole = role === 'teacher' ? 'teacher' : 'user';
 
+    // 리샘 브랜드 체크
+    const isResam = referralCode && referralCode.trim() === ':283518i2';
+    const userBrand = isResam ? 'resam' : '';
+
     const result = db.prepare(`
-      INSERT INTO users (username, password, nickname, profile_image, role)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(username, hashedPassword, nickname, profileImage, userRole);
+      INSERT INTO users (username, password, nickname, profile_image, role, brand)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(username, hashedPassword, nickname, profileImage, userRole, userBrand);
 
     // 선생님이면 teachers 테이블에도 추가
     if (role === 'teacher') {
@@ -250,6 +254,16 @@ app.post('/api/auth/register', upload.single('profileImage'), (req, res) => {
     const publicRoom = db.prepare("SELECT id FROM chat_rooms WHERE type = 'public' LIMIT 1").get();
     if (publicRoom) {
       db.prepare('INSERT OR IGNORE INTO chat_room_members (room_id, user_id) VALUES (?, ?)').run(publicRoom.id, result.lastInsertRowid);
+    }
+
+    // 리샘 브랜드: "리턴 모두 모여라" 채팅방 자동 참여
+    if (isResam) {
+      let resamRoom = db.prepare("SELECT id FROM chat_rooms WHERE name = '리턴 모두 모여라'").get();
+      if (!resamRoom) {
+        const rr = db.prepare("INSERT INTO chat_rooms (name, type, owner_id) VALUES ('리턴 모두 모여라', 'public', ?)").run(result.lastInsertRowid);
+        resamRoom = { id: rr.lastInsertRowid };
+      }
+      db.prepare('INSERT OR IGNORE INTO chat_room_members (room_id, user_id) VALUES (?, ?)').run(resamRoom.id, result.lastInsertRowid);
     }
 
     // 지인 추천 코드 처리
