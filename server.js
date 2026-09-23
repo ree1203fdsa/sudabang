@@ -237,7 +237,7 @@ app.post('/api/auth/register', upload.single('profileImage'), (req, res) => {
     const userRole = role === 'teacher' ? 'teacher' : 'user';
 
     // 리샘 브랜드 체크
-    const isResam = referralCode && referralCode.trim() === ':283518i2';
+    const isResam = referralCode && referralCode.trim() === '283518i2';
     const userBrand = isResam ? 'resam' : '';
 
     const result = db.prepare(`
