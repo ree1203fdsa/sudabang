@@ -18,7 +18,9 @@ const ALL_TABLES = [
   'referral_codes', 'referral_uses', 'coupons', 'coupon_uses',
   'achievements', 'user_achievements', 'user_mission_progress',
   'event_banners', 'minigame_records', 'gallery_posts', 'gallery_photos',
-  'level_rewards', 'user_titles', 'report_auto_actions', 'release_notes'
+  'level_rewards', 'user_titles', 'report_auto_actions', 'release_notes',
+  'popup_notices', 'events', 'class_votes', 'class_vote_options', 'class_vote_responses',
+  'typing_records', 'seat_assignments', 'stickers', 'user_stickers'
 ];
 
 class BetterSqlite3Compat {
@@ -784,6 +786,102 @@ async function initDatabase() {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id)
   )`);
+
+  // 공지사항 팝업
+  db.exec(`CREATE TABLE IF NOT EXISTS popup_notices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    is_active INTEGER DEFAULT 1,
+    created_by INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // 이벤트 캘린더
+  db.exec(`CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    event_date TEXT NOT NULL,
+    color TEXT DEFAULT '#6C63FF',
+    created_by INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // 반 투표
+  db.exec(`CREATE TABLE IF NOT EXISTS class_votes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    group_id INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_by INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  db.exec(`CREATE TABLE IF NOT EXISTS class_vote_options (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vote_id INTEGER NOT NULL,
+    label TEXT NOT NULL,
+    FOREIGN KEY (vote_id) REFERENCES class_votes(id)
+  )`);
+  db.exec(`CREATE TABLE IF NOT EXISTS class_vote_responses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vote_id INTEGER NOT NULL,
+    option_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(vote_id, user_id)
+  )`);
+
+  // 타자 연습 기록
+  db.exec(`CREATE TABLE IF NOT EXISTS typing_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    wpm INTEGER DEFAULT 0,
+    accuracy INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`);
+
+  // 자리 뽑기
+  db.exec(`CREATE TABLE IF NOT EXISTS seat_assignments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER NOT NULL,
+    seats_data TEXT NOT NULL,
+    created_by INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // 스티커
+  db.exec(`CREATE TABLE IF NOT EXISTS stickers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    emoji TEXT NOT NULL,
+    price INTEGER DEFAULT 0,
+    category TEXT DEFAULT 'basic'
+  )`);
+  db.exec(`CREATE TABLE IF NOT EXISTS user_stickers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    sticker_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, sticker_id)
+  )`);
+
+  // 기본 스티커 데이터
+  const stickerCount = db.prepare('SELECT COUNT(*) as cnt FROM stickers').get();
+  if (stickerCount.cnt === 0) {
+    const defaultStickers = [
+      ['하트 뿅뿅', '💕', 0, 'basic'], ['따봉', '👍', 0, 'basic'], ['짝짝짝', '👏', 0, 'basic'],
+      ['웃음', '😂', 0, 'basic'], ['눈물', '😢', 0, 'basic'], ['화남', '😡', 0, 'basic'],
+      ['별', '⭐', 50, 'premium'], ['불꽃', '🔥', 50, 'premium'], ['왕관', '👑', 100, 'premium'],
+      ['다이아', '💎', 100, 'premium'], ['유니콘', '🦄', 150, 'premium'], ['로켓', '🚀', 150, 'premium'],
+      ['무지개', '🌈', 200, 'special'], ['폭죽', '🎆', 200, 'special'], ['트로피', '🏆', 300, 'special'],
+      ['요술봉', '🪄', 300, 'special'], ['외계인', '👽', 500, 'special'], ['용', '🐉', 500, 'special']
+    ];
+    for (const [name, emoji, price, cat] of defaultStickers) {
+      db.prepare('INSERT INTO stickers (name, emoji, price, category) VALUES (?, ?, ?, ?)').run(name, emoji, price, cat);
+    }
+  }
 
   // 기존 DB 마이그레이션: brand 컬럼 추가
   try { db.exec("ALTER TABLE users ADD COLUMN brand TEXT DEFAULT ''"); } catch(e) {}

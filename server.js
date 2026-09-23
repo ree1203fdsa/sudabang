@@ -2554,6 +2554,239 @@ app.delete('/api/release-notes/:id', adminAuth, (req, res) => {
   res.json({ message: '릴리즈 노트가 삭제되었습니다.' });
 });
 
+// ==================== 공지사항 팝업 ====================
+app.get('/api/popup-notice', auth, (req, res) => {
+  const notice = db.prepare('SELECT * FROM popup_notices WHERE is_active = 1 ORDER BY created_at DESC LIMIT 1').get();
+  res.json({ notice: notice || null });
+});
+
+app.post('/api/popup-notice', adminAuth, (req, res) => {
+  const { title, content } = req.body;
+  if (!title || !content) return res.status(400).json({ error: '제목과 내용을 입력해주세요.' });
+  db.prepare('UPDATE popup_notices SET is_active = 0 WHERE is_active = 1').run();
+  db.prepare('INSERT INTO popup_notices (title, content, created_by) VALUES (?, ?, ?)').run(title, content, req.user.id);
+  res.json({ message: '공지사항이 등록되었습니다.' });
+});
+
+app.delete('/api/popup-notice/:id', adminAuth, (req, res) => {
+  db.prepare('UPDATE popup_notices SET is_active = 0 WHERE id = ?').run(req.params.id);
+  res.json({ message: '공지사항이 비활성화되었습니다.' });
+});
+
+// ==================== 미니게임 랭킹 ====================
+app.get('/api/minigame/ranking', auth, (req, res) => {
+  const ranking = db.prepare(`
+    SELECT u.id, u.nickname, u.profile_image, u.level,
+      SUM(CASE WHEN mr.result = 'win' THEN mr.reward ELSE 0 END) as total_earned,
+      COUNT(*) as total_games,
+      SUM(CASE WHEN mr.result = 'win' THEN 1 ELSE 0 END) as wins
+    FROM minigame_records mr
+    JOIN users u ON mr.user_id = u.id
+    GROUP BY mr.user_id
+    ORDER BY total_earned DESC
+    LIMIT 50
+  `).all();
+  res.json({ ranking });
+});
+
+// ==================== 명예의 전당 ====================
+app.get('/api/hall-of-fame', auth, (req, res) => {
+  const topPoster = db.prepare('SELECT u.nickname, COUNT(*) as cnt FROM posts p JOIN users u ON p.user_id = u.id GROUP BY p.user_id ORDER BY cnt DESC LIMIT 1').get();
+  const topHeart = db.prepare('SELECT u.nickname, COUNT(*) as cnt FROM post_hearts ph JOIN posts p ON ph.post_id = p.id JOIN users u ON p.user_id = u.id GROUP BY p.user_id ORDER BY cnt DESC LIMIT 1').get();
+  const topLevel = db.prepare('SELECT nickname, level, exp FROM users ORDER BY level DESC, exp DESC LIMIT 1').get();
+  const topCoins = db.prepare("SELECT nickname, coins FROM users WHERE role != 'admin' ORDER BY coins DESC LIMIT 1").get();
+  const topGamer = db.prepare("SELECT u.nickname, SUM(CASE WHEN mr.result='win' THEN mr.reward ELSE 0 END) as earned FROM minigame_records mr JOIN users u ON mr.user_id = u.id GROUP BY mr.user_id ORDER BY earned DESC LIMIT 1").get();
+  const topAttend = db.prepare('SELECT u.nickname, COUNT(*) as cnt FROM attendance a JOIN users u ON a.user_id = u.id GROUP BY a.user_id ORDER BY cnt DESC LIMIT 1').get();
+  res.json({ records: { topPoster, topHeart, topLevel, topCoins, topGamer, topAttend } });
+});
+
+// ==================== 이벤트 캘린더 ====================
+app.get('/api/events', auth, (req, res) => {
+  const { month } = req.query;
+  let events;
+  if (month) {
+    events = db.prepare("SELECT e.*, u.nickname FROM events e JOIN users u ON e.created_by = u.id WHERE e.event_date LIKE ? ORDER BY e.event_date ASC").all(`${month}%`);
+  } else {
+    events = db.prepare('SELECT e.*, u.nickname FROM events e JOIN users u ON e.created_by = u.id ORDER BY e.event_date ASC LIMIT 50').all();
+  }
+  res.json({ events });
+});
+
+app.post('/api/events', auth, (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'teacher') return res.status(403).json({ error: '권한이 없습니다.' });
+  const { title, description, event_date, color } = req.body;
+  if (!title || !event_date) return res.status(400).json({ error: '제목과 날짜를 입력해주세요.' });
+  db.prepare('INSERT INTO events (title, description, event_date, color, created_by) VALUES (?, ?, ?, ?, ?)').run(title, description || '', event_date, color || '#6C63FF', req.user.id);
+  res.json({ message: '일정이 등록되었습니다.' });
+});
+
+app.delete('/api/events/:id', auth, (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'teacher') return res.status(403).json({ error: '권한이 없습니다.' });
+  db.prepare('DELETE FROM events WHERE id = ?').run(req.params.id);
+  res.json({ message: '일정이 삭제되었습니다.' });
+});
+
+// ==================== 스티커 ====================
+app.get('/api/stickers', auth, (req, res) => {
+  const stickers = db.prepare('SELECT * FROM stickers ORDER BY price ASC').all();
+  const owned = db.prepare('SELECT sticker_id FROM user_stickers WHERE user_id = ?').all(req.user.id).map(r => r.sticker_id);
+  res.json({ stickers, owned });
+});
+
+app.post('/api/stickers/buy/:id', auth, (req, res) => {
+  const sticker = db.prepare('SELECT * FROM stickers WHERE id = ?').get(req.params.id);
+  if (!sticker) return res.status(404).json({ error: '스티커를 찾을 수 없습니다.' });
+  const already = db.prepare('SELECT id FROM user_stickers WHERE user_id = ? AND sticker_id = ?').get(req.user.id, sticker.id);
+  if (already) return res.status(400).json({ error: '이미 보유한 스티커입니다.' });
+  if (sticker.price > 0 && req.user.coins < sticker.price) return res.status(400).json({ error: '코인이 부족합니다.' });
+  if (sticker.price > 0) {
+    db.prepare('UPDATE users SET coins = coins - ? WHERE id = ?').run(sticker.price, req.user.id);
+    db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(req.user.id, -sticker.price, '스티커 구매: ' + sticker.name);
+  }
+  db.prepare('INSERT INTO user_stickers (user_id, sticker_id) VALUES (?, ?)').run(req.user.id, sticker.id);
+  const user = db.prepare('SELECT coins FROM users WHERE id = ?').get(req.user.id);
+  res.json({ message: '스티커를 구매했습니다!', coins: user.coins });
+});
+
+// ==================== 자리 뽑기 (선생님 전용) ====================
+app.post('/api/seat-assignment', auth, (req, res) => {
+  if (req.user.role !== 'teacher' && req.user.role !== 'admin') return res.status(403).json({ error: '선생님만 사용할 수 있습니다.' });
+  const { groupId, rows, cols, students } = req.body;
+  if (!students || !students.length) return res.status(400).json({ error: '학생 목록이 필요합니다.' });
+  const shuffled = [...students].sort(() => Math.random() - 0.5);
+  const seats = [];
+  let idx = 0;
+  for (let r = 0; r < (rows || 5); r++) {
+    const row = [];
+    for (let c = 0; c < (cols || 6); c++) {
+      row.push(idx < shuffled.length ? shuffled[idx++] : '');
+    }
+    seats.push(row);
+  }
+  db.prepare('INSERT INTO seat_assignments (group_id, seats_data, created_by) VALUES (?, ?, ?)').run(groupId || 0, JSON.stringify(seats), req.user.id);
+  res.json({ seats });
+});
+
+app.get('/api/seat-assignment', auth, (req, res) => {
+  const { groupId } = req.query;
+  const latest = db.prepare('SELECT * FROM seat_assignments WHERE group_id = ? ORDER BY created_at DESC LIMIT 1').get(groupId || 0);
+  if (latest) latest.seats_data = JSON.parse(latest.seats_data);
+  res.json({ assignment: latest || null });
+});
+
+// ==================== 반 투표 (선생님 전용) ====================
+app.get('/api/class-votes', auth, (req, res) => {
+  const votes = db.prepare('SELECT cv.*, u.nickname FROM class_votes cv JOIN users u ON cv.created_by = u.id WHERE cv.is_active = 1 ORDER BY cv.created_at DESC').all();
+  for (const v of votes) {
+    v.options = db.prepare('SELECT co.*, COUNT(cr.id) as vote_count FROM class_vote_options co LEFT JOIN class_vote_responses cr ON co.id = cr.option_id WHERE co.vote_id = ? GROUP BY co.id').all(v.id);
+    v.myVote = db.prepare('SELECT option_id FROM class_vote_responses WHERE vote_id = ? AND user_id = ?').get(v.id, req.user.id);
+  }
+  res.json({ votes });
+});
+
+app.post('/api/class-votes', auth, (req, res) => {
+  if (req.user.role !== 'teacher' && req.user.role !== 'admin') return res.status(403).json({ error: '선생님만 만들 수 있습니다.' });
+  const { title, options, groupId } = req.body;
+  if (!title || !options || options.length < 2) return res.status(400).json({ error: '제목과 2개 이상의 선택지를 입력해주세요.' });
+  const result = db.prepare('INSERT INTO class_votes (title, group_id, created_by) VALUES (?, ?, ?)').run(title, groupId || 0, req.user.id);
+  for (const opt of options) {
+    db.prepare('INSERT INTO class_vote_options (vote_id, label) VALUES (?, ?)').run(result.lastInsertRowid, opt);
+  }
+  res.json({ message: '반 투표가 생성되었습니다.' });
+});
+
+app.post('/api/class-votes/:id/vote', auth, (req, res) => {
+  const { optionId } = req.body;
+  const existing = db.prepare('SELECT id FROM class_vote_responses WHERE vote_id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  if (existing) return res.status(400).json({ error: '이미 투표했습니다.' });
+  db.prepare('INSERT INTO class_vote_responses (vote_id, option_id, user_id) VALUES (?, ?, ?)').run(req.params.id, optionId, req.user.id);
+  res.json({ message: '투표 완료!' });
+});
+
+app.delete('/api/class-votes/:id', auth, (req, res) => {
+  if (req.user.role !== 'teacher' && req.user.role !== 'admin') return res.status(403).json({ error: '권한이 없습니다.' });
+  db.prepare('UPDATE class_votes SET is_active = 0 WHERE id = ?').run(req.params.id);
+  res.json({ message: '투표가 종료되었습니다.' });
+});
+
+// ==================== 타자 연습 ====================
+app.post('/api/typing-record', auth, (req, res) => {
+  const { wpm, accuracy } = req.body;
+  db.prepare('INSERT INTO typing_records (user_id, wpm, accuracy) VALUES (?, ?, ?)').run(req.user.id, wpm, accuracy);
+  res.json({ message: '기록이 저장되었습니다.' });
+});
+
+app.get('/api/typing-ranking', auth, (req, res) => {
+  const ranking = db.prepare(`
+    SELECT u.nickname, u.profile_image, MAX(tr.wpm) as best_wpm, MAX(tr.accuracy) as best_accuracy
+    FROM typing_records tr JOIN users u ON tr.user_id = u.id
+    GROUP BY tr.user_id ORDER BY best_wpm DESC LIMIT 20
+  `).all();
+  const myBest = db.prepare('SELECT MAX(wpm) as best_wpm, MAX(accuracy) as best_accuracy FROM typing_records WHERE user_id = ?').get(req.user.id);
+  res.json({ ranking, myBest });
+});
+
+// ==================== 프로필 꾸미기 ====================
+app.get('/api/profile-frames', auth, (req, res) => {
+  const frames = [
+    { id: 'gold', name: '골드 프레임', color: '#FFD700', price: 200 },
+    { id: 'silver', name: '실버 프레임', color: '#C0C0C0', price: 100 },
+    { id: 'rainbow', name: '무지개 프레임', color: 'rainbow', price: 500 },
+    { id: 'fire', name: '불꽃 프레임', color: '#FF4500', price: 300 },
+    { id: 'ocean', name: '바다 프레임', color: '#1E90FF', price: 300 },
+    { id: 'nature', name: '자연 프레임', color: '#2ED573', price: 200 },
+    { id: 'purple', name: '보라 프레임', color: '#6C63FF', price: 150 },
+    { id: 'pink', name: '핑크 프레임', color: '#FF6B9D', price: 150 }
+  ];
+  res.json({ frames, current: req.user.profile_frame || '' });
+});
+
+app.post('/api/profile-frames/equip', auth, (req, res) => {
+  const { frameId } = req.body;
+  db.prepare('UPDATE users SET profile_frame = ? WHERE id = ?').run(frameId || '', req.user.id);
+  res.json({ message: frameId ? '프레임이 적용되었습니다!' : '프레임이 해제되었습니다.' });
+});
+
+// ==================== AI 챗봇 (Gemini) ====================
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const AI_SYSTEM_PROMPT = '너는 수다방 앱의 AI 도우미야. 친절하고 재미있게 대화해줘. 한국어로 답변해. 답변은 짧고 간결하게 해줘.';
+
+app.post('/api/ai/chat', auth, async (req, res) => {
+  if (!GEMINI_API_KEY) return res.status(500).json({ error: 'AI 기능이 설정되지 않았습니다.' });
+  const { message, history } = req.body;
+  if (!message || !message.trim()) return res.status(400).json({ error: '메시지를 입력해주세요.' });
+
+  try {
+    const contents = [];
+    if (history && history.length) {
+      for (const h of history.slice(-10)) {
+        contents.push({ role: h.role === 'ai' ? 'model' : 'user', parts: [{ text: h.text }] });
+      }
+    }
+    contents.push({ role: 'user', parts: [{ text: message }] });
+
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        systemInstruction: { parts: [{ text: AI_SYSTEM_PROMPT }] },
+        generationConfig: { maxOutputTokens: 500, temperature: 0.8 }
+      })
+    });
+
+    const data = await resp.json();
+    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+      res.json({ reply: data.candidates[0].content.parts[0].text });
+    } else {
+      res.status(500).json({ error: 'AI 응답을 받지 못했습니다.' });
+    }
+  } catch (e) {
+    console.error('AI Error:', e.message);
+    res.status(500).json({ error: 'AI 서비스에 연결할 수 없습니다.' });
+  }
+});
+
 // SPA 라우팅
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

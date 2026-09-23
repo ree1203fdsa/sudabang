@@ -19,6 +19,7 @@ const App = {
         this.render();
         this.loadNotifCount();
         this.registerFCMToken();
+        this.checkPopupNotice();
       } catch (e) {
         this.token = null;
         localStorage.removeItem('token');
@@ -436,6 +437,17 @@ const App = {
       'my-reports': () => this.renderMyReports(),
       polls: () => this.renderPolls(),
       'release-notes': () => this.renderReleaseNotes(),
+      'ai-chat': () => this.renderAIChat(),
+      'minigame-ranking': () => this.renderMinigameRanking(),
+      'hall-of-fame': () => this.renderHallOfFame(),
+      'event-calendar': () => this.renderEventCalendar(),
+      'sticker-shop': () => this.renderStickerShop(),
+      'seat-picker': () => this.renderSeatPicker(),
+      'class-votes': () => this.renderClassVotes(),
+      'typing-practice': () => this.renderTypingPractice(),
+      'random-menu': () => this.renderRandomMenu(),
+      'drawing-board': () => this.renderDrawingBoard(),
+      'profile-frames': () => this.renderProfileFrames(),
     };
 
     if (pages[page]) pages[page]();
@@ -596,6 +608,55 @@ const App = {
           <div class="stat-icon" style="background:#1E90FF20;color:#1E90FF"><i class="fas fa-poll"></i></div>
           <div class="stat-label">투표</div>
         </div>
+        <div class="stat-card" onclick="App.navigate('ai-chat')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#6C63FF20;color:#6C63FF"><i class="fas fa-robot"></i></div>
+          <div class="stat-label">AI 채팅</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('hall-of-fame')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#FFD70020;color:#FFD700"><i class="fas fa-crown"></i></div>
+          <div class="stat-label">명예의 전당</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('event-calendar')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#1E90FF20;color:#1E90FF"><i class="fas fa-calendar-alt"></i></div>
+          <div class="stat-label">캘린더</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('sticker-shop')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#FFD70020;color:#FFD700"><i class="fas fa-smile"></i></div>
+          <div class="stat-label">스티커</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('typing-practice')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#2ED57320;color:#2ED573"><i class="fas fa-keyboard"></i></div>
+          <div class="stat-label">타자 연습</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('random-menu')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#FF6B9D20;color:#FF6B9D"><i class="fas fa-utensils"></i></div>
+          <div class="stat-label">뭐 먹지</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('drawing-board')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#E040FB20;color:#E040FB"><i class="fas fa-paint-brush"></i></div>
+          <div class="stat-label">그림판</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('profile-frames')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#E040FB20;color:#E040FB"><i class="fas fa-palette"></i></div>
+          <div class="stat-label">프로필 꾸미기</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('minigame-ranking')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#FFD70020;color:#FFD700"><i class="fas fa-medal"></i></div>
+          <div class="stat-label">게임 랭킹</div>
+        </div>
+        ${this.user.role === 'teacher' || this.user.role === 'admin' ? `
+        <div class="stat-card" onclick="App.navigate('seat-picker')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#6C63FF20;color:#6C63FF"><i class="fas fa-th"></i></div>
+          <div class="stat-label">자리 뽑기</div>
+        </div>
+        <div class="stat-card" onclick="App.navigate('class-votes')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#E040FB20;color:#E040FB"><i class="fas fa-vote-yea"></i></div>
+          <div class="stat-label">반 투표</div>
+        </div>` : `
+        <div class="stat-card" onclick="App.navigate('class-votes')" style="cursor:pointer">
+          <div class="stat-icon" style="background:#E040FB20;color:#E040FB"><i class="fas fa-vote-yea"></i></div>
+          <div class="stat-label">반 투표</div>
+        </div>`}
         ${this.user.role === 'admin' ? `
         <div class="stat-card" onclick="App.navigate('admin')" style="cursor:pointer">
           <div class="stat-icon" style="background:#FF475720;color:var(--danger)"><i class="fas fa-shield-alt"></i></div>
@@ -2090,6 +2151,637 @@ const App = {
     } catch (e) { document.getElementById('my-reports-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
   },
 
+  // ==================== 공지사항 팝업 ====================
+  async checkPopupNotice() {
+    try {
+      const data = await this.api('/api/popup-notice');
+      if (data.notice) {
+        const dismissed = localStorage.getItem('dismissed_notice');
+        if (dismissed === String(data.notice.id)) return;
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+          <div class="modal" style="max-width:400px">
+            <div class="modal-header"><h3><i class="fas fa-bullhorn" style="color:var(--primary)"></i> ${this.escapeHtml(data.notice.title)}</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+            <div class="modal-body"><div style="white-space:pre-wrap;line-height:1.7">${this.escapeHtml(data.notice.content)}</div></div>
+            <div class="modal-footer">
+              <button class="btn" onclick="localStorage.setItem('dismissed_notice','${data.notice.id}');this.closest('.modal-overlay').remove()">다시 보지 않기</button>
+              <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">확인</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+    } catch (e) {}
+  },
+
+  // ==================== 미니게임 랭킹 ====================
+  async renderMinigameRanking() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = '<div class="page-title"><i class="fas fa-trophy page-title-icon" style="color:#FFD700"></i> 미니게임 랭킹</div><div id="mg-rank-list">로딩중...</div>';
+    try {
+      const data = await this.api('/api/minigame/ranking');
+      document.getElementById('mg-rank-list').innerHTML = data.ranking.length ? data.ranking.map((r, i) => `
+        <div class="card" style="padding:12px;display:flex;align-items:center;gap:12px">
+          <div style="width:28px;text-align:center;font-weight:800;color:${i < 3 ? ['#FFD700','#C0C0C0','#CD7F32'][i] : 'var(--text-muted)'}">${i + 1}</div>
+          <img src="${r.profile_image}" style="width:36px;height:36px;border-radius:50%;object-fit:cover" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%236C63FF%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22 fill=%22white%22>👤</text></svg>'">
+          <div style="flex:1"><b>${this.escapeHtml(r.nickname)}</b><div style="font-size:12px;color:var(--text-muted)">Lv.${r.level} · ${r.wins}승/${r.total_games}판</div></div>
+          <div style="font-weight:800;color:var(--coin)"><i class="fas fa-coins"></i> ${r.total_earned}</div>
+        </div>
+      `).join('') : '<div class="empty-state"><p>아직 기록이 없습니다</p></div>';
+    } catch (e) { document.getElementById('mg-rank-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  // ==================== 명예의 전당 ====================
+  async renderHallOfFame() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = '<div class="page-title"><i class="fas fa-crown page-title-icon" style="color:#FFD700"></i> 명예의 전당</div><div id="hof-list">로딩중...</div>';
+    try {
+      const data = await this.api('/api/hall-of-fame');
+      const r = data.records;
+      const items = [
+        { icon: '✍️', title: '글쓰기 왕', user: r.topPoster?.nickname, value: `${r.topPoster?.cnt || 0}개 작성` },
+        { icon: '❤️', title: '인기 스타', user: r.topHeart?.nickname, value: `${r.topHeart?.cnt || 0}개 좋아요` },
+        { icon: '⭐', title: '최고 레벨', user: r.topLevel?.nickname, value: `Lv.${r.topLevel?.level || 0}` },
+        { icon: '💰', title: '부자', user: r.topCoins?.nickname, value: `${r.topCoins?.coins || 0} ${this.getCoinName()}` },
+        { icon: '🎮', title: '게임 고수', user: r.topGamer?.nickname, value: `${r.topGamer?.earned || 0} ${this.getCoinName()} 획득` },
+        { icon: '📅', title: '개근왕', user: r.topAttend?.nickname, value: `${r.topAttend?.cnt || 0}일 출석` }
+      ];
+      document.getElementById('hof-list').innerHTML = items.map(item => `
+        <div class="card" style="padding:16px;display:flex;align-items:center;gap:14px">
+          <div style="font-size:32px">${item.icon}</div>
+          <div style="flex:1"><div style="font-size:13px;color:var(--text-muted)">${item.title}</div><b style="font-size:16px">${item.user ? this.escapeHtml(item.user) : '-'}</b></div>
+          <div style="font-size:13px;color:var(--primary);font-weight:700">${item.value}</div>
+        </div>
+      `).join('');
+    } catch (e) { document.getElementById('hof-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  // ==================== 이벤트 캘린더 ====================
+  _calMonth: new Date().toISOString().slice(0, 7),
+
+  async renderEventCalendar() {
+    const content = document.getElementById('page-content');
+    const isTeacher = this.user.role === 'teacher' || this.user.role === 'admin';
+    const [year, month] = this._calMonth.split('-').map(Number);
+    const monthName = `${year}년 ${month}월`;
+    content.innerHTML = `
+      <div class="page-title"><i class="fas fa-calendar-alt page-title-icon" style="color:#1E90FF"></i> 이벤트 캘린더</div>
+      <div class="card" style="padding:16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <button class="btn" onclick="App._calPrev()"><i class="fas fa-chevron-left"></i></button>
+          <b style="font-size:16px">${monthName}</b>
+          <button class="btn" onclick="App._calNext()"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:13px">
+          ${'일,월,화,수,목,금,토'.split(',').map((d, i) => `<div style="padding:6px;font-weight:700;color:${i === 0 ? 'var(--danger)' : i === 6 ? 'var(--primary)' : 'var(--text-secondary)'}">${d}</div>`).join('')}
+          <div id="cal-days"></div>
+        </div>
+      </div>
+      ${isTeacher ? '<button class="btn btn-primary" onclick="App.showAddEvent()" style="width:100%;margin-bottom:12px"><i class="fas fa-plus"></i> 일정 추가</button>' : ''}
+      <div id="cal-events">로딩중...</div>
+    `;
+    this._loadCalendar();
+  },
+
+  async _loadCalendar() {
+    const [year, month] = this._calMonth.split('-').map(Number);
+    const data = await this.api(`/api/events?month=${this._calMonth}`);
+    const eventDates = {};
+    for (const e of data.events) { eventDates[e.event_date] = e; }
+
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const lastDate = new Date(year, month, 0).getDate();
+    const today = new Date().toISOString().split('T')[0];
+    let html = '';
+    for (let i = 0; i < firstDay; i++) html += '<div></div>';
+    for (let d = 1; d <= lastDate; d++) {
+      const dateStr = `${this._calMonth}-${String(d).padStart(2, '0')}`;
+      const hasEvent = eventDates[dateStr];
+      const isToday = dateStr === today;
+      html += `<div style="padding:6px;border-radius:8px;${isToday ? 'background:var(--primary);color:white;font-weight:700;' : ''}${hasEvent ? 'position:relative;' : ''}">${d}${hasEvent ? `<div style="width:6px;height:6px;border-radius:50%;background:${hasEvent.color};margin:2px auto 0"></div>` : ''}</div>`;
+    }
+    document.getElementById('cal-days').outerHTML = html;
+
+    const isTeacher = this.user.role === 'teacher' || this.user.role === 'admin';
+    document.getElementById('cal-events').innerHTML = data.events.length ? data.events.map(e => `
+      <div class="card" style="padding:12px;display:flex;align-items:center;gap:12px">
+        <div style="width:8px;height:40px;border-radius:4px;background:${e.color}"></div>
+        <div style="flex:1"><b>${this.escapeHtml(e.title)}</b><div style="font-size:12px;color:var(--text-muted)">${e.event_date}${e.description ? ' · ' + this.escapeHtml(e.description) : ''}</div></div>
+        ${isTeacher ? `<button class="btn" onclick="App.deleteEvent(${e.id})" style="font-size:12px;padding:4px 8px;color:var(--danger)"><i class="fas fa-trash"></i></button>` : ''}
+      </div>
+    `).join('') : '<div class="empty-state"><p>이번 달 일정이 없습니다</p></div>';
+  },
+
+  _calPrev() { const [y, m] = this._calMonth.split('-').map(Number); this._calMonth = m === 1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`; this.renderEventCalendar(); },
+  _calNext() { const [y, m] = this._calMonth.split('-').map(Number); this._calMonth = m === 12 ? `${y+1}-01` : `${y}-${String(m+1).padStart(2,'0')}`; this.renderEventCalendar(); },
+
+  showAddEvent() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal" style="max-width:400px">
+        <div class="modal-header"><h3>일정 추가</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+        <div class="modal-body">
+          <input type="text" id="ev-title" class="input" placeholder="일정 제목" style="margin-bottom:12px">
+          <input type="date" id="ev-date" class="input" value="${this._calMonth}-01" style="margin-bottom:12px">
+          <input type="text" id="ev-desc" class="input" placeholder="설명 (선택)" style="margin-bottom:12px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">${['#6C63FF','#FF6B9D','#2ED573','#FFD700','#FF4757','#1E90FF'].map(c => `<div onclick="document.getElementById('ev-color').value='${c}';document.querySelectorAll('.ev-c').forEach(e=>e.style.outline='');this.style.outline='3px solid var(--text)'" class="ev-c" style="width:32px;height:32px;border-radius:50%;background:${c};cursor:pointer"></div>`).join('')}</div>
+          <input type="hidden" id="ev-color" value="#6C63FF">
+        </div>
+        <div class="modal-footer"><button class="btn" onclick="this.closest('.modal-overlay').remove()">취소</button><button class="btn btn-primary" onclick="App.submitEvent()">추가</button></div>
+      </div>`;
+    document.body.appendChild(modal);
+  },
+
+  async submitEvent() {
+    const title = document.getElementById('ev-title').value.trim();
+    const event_date = document.getElementById('ev-date').value;
+    const description = document.getElementById('ev-desc').value.trim();
+    const color = document.getElementById('ev-color').value;
+    if (!title || !event_date) return alert('제목과 날짜를 입력하세요');
+    try {
+      await this.api('/api/events', { method: 'POST', body: { title, event_date, description, color } });
+      document.querySelector('.modal-overlay')?.remove();
+      this.renderEventCalendar();
+    } catch (e) { alert(e.message); }
+  },
+
+  async deleteEvent(id) {
+    if (!confirm('일정을 삭제하시겠습니까?')) return;
+    try { await this.api(`/api/events/${id}`, { method: 'DELETE' }); this.renderEventCalendar(); } catch (e) { alert(e.message); }
+  },
+
+  // ==================== 스티커 상점 ====================
+  async renderStickerShop() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = '<div class="page-title"><i class="fas fa-smile page-title-icon" style="color:#FFD700"></i> 스티커 상점</div><div id="sticker-list">로딩중...</div>';
+    try {
+      const data = await this.api('/api/stickers');
+      const categories = { basic: '기본', premium: '프리미엄', special: '스페셜' };
+      let html = '';
+      for (const cat of ['basic', 'premium', 'special']) {
+        const items = data.stickers.filter(s => s.category === cat);
+        if (!items.length) continue;
+        html += `<div style="font-size:14px;font-weight:700;margin:16px 0 8px;color:var(--text-secondary)">${categories[cat]}</div>`;
+        html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">';
+        for (const s of items) {
+          const owned = data.owned.includes(s.id);
+          html += `
+            <div class="card" style="padding:12px;text-align:center;${owned ? 'opacity:0.6;' : ''}">
+              <div style="font-size:36px;margin-bottom:4px">${s.emoji}</div>
+              <div style="font-size:12px;font-weight:600">${s.name}</div>
+              ${owned ? '<div style="font-size:11px;color:var(--success);margin-top:4px">보유중</div>' :
+                s.price === 0 ? `<button class="btn btn-primary" onclick="App.buySticker(${s.id})" style="font-size:11px;padding:4px 10px;margin-top:4px">무료</button>` :
+                `<button class="btn btn-primary" onclick="App.buySticker(${s.id})" style="font-size:11px;padding:4px 10px;margin-top:4px"><i class="fas fa-coins"></i> ${s.price}</button>`}
+            </div>`;
+        }
+        html += '</div>';
+      }
+      document.getElementById('sticker-list').innerHTML = html;
+    } catch (e) { document.getElementById('sticker-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  async buySticker(id) {
+    try {
+      const data = await this.api(`/api/stickers/buy/${id}`, { method: 'POST' });
+      if (data.coins !== undefined) this.user.coins = data.coins;
+      this.showToast(data.message, 'success');
+      this.renderStickerShop();
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  // ==================== 자리 뽑기 (선생님) ====================
+  async renderSeatPicker() {
+    const content = document.getElementById('page-content');
+    if (this.user.role !== 'teacher' && this.user.role !== 'admin') {
+      content.innerHTML = '<div class="empty-state"><p>선생님만 사용할 수 있습니다</p></div>';
+      return;
+    }
+    content.innerHTML = `
+      <div class="page-title"><i class="fas fa-th page-title-icon" style="color:#6C63FF"></i> 자리 뽑기</div>
+      <div class="card" style="padding:16px;margin-bottom:12px">
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <div style="flex:1"><label style="font-size:13px;font-weight:600">행</label><input type="number" id="seat-rows" class="input" value="5" min="1" max="10"></div>
+          <div style="flex:1"><label style="font-size:13px;font-weight:600">열</label><input type="number" id="seat-cols" class="input" value="6" min="1" max="10"></div>
+        </div>
+        <label style="font-size:13px;font-weight:600">학생 이름 (쉼표로 구분)</label>
+        <textarea id="seat-students" class="input" rows="3" placeholder="홍길동, 김철수, 이영희..." style="margin-top:4px"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="App.generateSeats()" style="width:100%;margin-bottom:16px"><i class="fas fa-random"></i> 자리 뽑기!</button>
+      <div id="seat-result"></div>
+    `;
+  },
+
+  async generateSeats() {
+    const rows = parseInt(document.getElementById('seat-rows').value) || 5;
+    const cols = parseInt(document.getElementById('seat-cols').value) || 6;
+    const text = document.getElementById('seat-students').value.trim();
+    if (!text) return alert('학생 이름을 입력하세요');
+    const students = text.split(',').map(s => s.trim()).filter(s => s);
+    try {
+      const data = await this.api('/api/seat-assignment', { method: 'POST', body: { rows, cols, students } });
+      const container = document.getElementById('seat-result');
+      container.innerHTML = `
+        <div class="card" style="padding:16px;text-align:center">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--primary)">📋 칠판</div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse">
+              ${data.seats.map(row => `<tr>${row.map(s => `<td style="border:1px solid var(--border);padding:8px;font-size:12px;font-weight:${s ? '600' : '400'};background:${s ? 'var(--primary-bg)' : 'var(--bg-input)'}">${s || '-'}</td>`).join('')}</tr>`).join('')}
+            </table>
+          </div>
+        </div>
+      `;
+      this.showToast('자리가 배정되었습니다!', 'success');
+    } catch (e) { alert(e.message); }
+  },
+
+  // ==================== 반 투표 ====================
+  async renderClassVotes() {
+    const content = document.getElementById('page-content');
+    const isTeacher = this.user.role === 'teacher' || this.user.role === 'admin';
+    content.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div class="page-title" style="margin-bottom:0"><i class="fas fa-vote-yea page-title-icon" style="color:#E040FB"></i> 반 투표</div>
+        ${isTeacher ? '<button class="btn btn-primary" onclick="App.showCreateClassVote()" style="font-size:13px;padding:8px 16px"><i class="fas fa-plus"></i> 만들기</button>' : ''}
+      </div>
+      <div id="class-votes-list">로딩중...</div>
+    `;
+    try {
+      const data = await this.api('/api/class-votes');
+      const container = document.getElementById('class-votes-list');
+      container.innerHTML = data.votes.length ? data.votes.map(v => {
+        const totalVotes = v.options.reduce((sum, o) => sum + o.vote_count, 0);
+        return `
+          <div class="card" style="padding:16px;margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <b style="font-size:15px">${this.escapeHtml(v.title)}</b>
+              ${isTeacher ? `<button class="btn" onclick="App.deleteClassVote(${v.id})" style="font-size:12px;padding:4px 8px;color:var(--danger)"><i class="fas fa-stop"></i> 종료</button>` : ''}
+            </div>
+            ${v.options.map(o => {
+              const pct = totalVotes ? Math.round(o.vote_count / totalVotes * 100) : 0;
+              const isMyVote = v.myVote && v.myVote.option_id === o.id;
+              return `
+                <div onclick="${v.myVote ? '' : `App.classVote(${v.id},${o.id})`}" style="margin-bottom:8px;cursor:${v.myVote ? 'default' : 'pointer'}">
+                  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+                    <span>${isMyVote ? '✔ ' : ''}${this.escapeHtml(o.label)}</span>
+                    <span style="font-weight:700">${pct}% (${o.vote_count})</span>
+                  </div>
+                  <div style="height:8px;background:var(--bg-input);border-radius:4px;overflow:hidden">
+                    <div style="height:100%;width:${pct}%;background:${isMyVote ? 'var(--primary)' : 'var(--primary-light)'};border-radius:4px;transition:width .3s"></div>
+                  </div>
+                </div>`;
+            }).join('')}
+            <div style="font-size:12px;color:var(--text-muted);margin-top:8px">${this.escapeHtml(v.nickname)} · ${totalVotes}명 투표</div>
+          </div>`;
+      }).join('') : '<div class="empty-state"><p>진행 중인 반 투표가 없습니다</p></div>';
+    } catch (e) { document.getElementById('class-votes-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  showCreateClassVote() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal" style="max-width:400px">
+        <div class="modal-header"><h3>반 투표 만들기</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+        <div class="modal-body">
+          <input type="text" id="cv-title" class="input" placeholder="우리 반에서 제일 ○○한 사람은?" style="margin-bottom:12px">
+          <div id="cv-options"><input type="text" class="input cv-opt" placeholder="선택지 1" style="margin-bottom:8px"><input type="text" class="input cv-opt" placeholder="선택지 2" style="margin-bottom:8px"></div>
+          <button class="btn" onclick="const d=document.createElement('input');d.type='text';d.className='input cv-opt';d.placeholder='선택지 '+(document.querySelectorAll('.cv-opt').length+1);d.style.marginBottom='8px';document.getElementById('cv-options').appendChild(d)" style="font-size:12px"><i class="fas fa-plus"></i> 선택지 추가</button>
+        </div>
+        <div class="modal-footer"><button class="btn" onclick="this.closest('.modal-overlay').remove()">취소</button><button class="btn btn-primary" onclick="App.submitClassVote()">만들기</button></div>
+      </div>`;
+    document.body.appendChild(modal);
+  },
+
+  async submitClassVote() {
+    const title = document.getElementById('cv-title').value.trim();
+    const options = [...document.querySelectorAll('.cv-opt')].map(i => i.value.trim()).filter(v => v);
+    if (!title) return alert('제목을 입력하세요');
+    if (options.length < 2) return alert('선택지를 2개 이상 입력하세요');
+    try {
+      await this.api('/api/class-votes', { method: 'POST', body: { title, options } });
+      document.querySelector('.modal-overlay')?.remove();
+      this.showToast('반 투표가 생성되었습니다!', 'success');
+      this.renderClassVotes();
+    } catch (e) { alert(e.message); }
+  },
+
+  async classVote(voteId, optionId) {
+    try { await this.api(`/api/class-votes/${voteId}/vote`, { method: 'POST', body: { optionId } }); this.renderClassVotes(); } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  async deleteClassVote(id) {
+    if (!confirm('투표를 종료하시겠습니까?')) return;
+    try { await this.api(`/api/class-votes/${id}`, { method: 'DELETE' }); this.renderClassVotes(); } catch (e) { alert(e.message); }
+  },
+
+  // ==================== 타자 연습 ====================
+  _typingSentences: [
+    '빠른 갈색 여우가 게으른 개를 뛰어넘었다',
+    '오늘도 열심히 공부하는 학생들을 응원합니다',
+    '세상에서 가장 아름다운 것은 사랑입니다',
+    '하늘이 맑고 바람이 시원한 가을 날씨입니다',
+    '맛있는 음식을 먹으면 행복해집니다',
+    '친구와 함께하면 어떤 일이든 즐겁습니다',
+    '열심히 노력하면 반드시 좋은 결과가 옵니다',
+    '꿈을 향해 한 걸음씩 나아가는 것이 중요합니다',
+    '우리 학교는 최고의 학교입니다',
+    '독서는 마음의 양식이라고 합니다'
+  ],
+
+  renderTypingPractice() {
+    const content = document.getElementById('page-content');
+    const sentence = this._typingSentences[Math.floor(Math.random() * this._typingSentences.length)];
+    content.innerHTML = `
+      <div class="page-title"><i class="fas fa-keyboard page-title-icon" style="color:#2ED573"></i> 타자 연습</div>
+      <div class="card" style="padding:20px;margin-bottom:12px;text-align:center">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">아래 문장을 따라 쳐보세요</div>
+        <div id="typing-target" style="font-size:18px;font-weight:700;line-height:1.8;letter-spacing:1px;color:var(--primary)">${sentence}</div>
+      </div>
+      <div class="card" style="padding:16px;margin-bottom:12px">
+        <textarea id="typing-input" class="input" rows="2" placeholder="여기에 입력하세요..." oninput="App._typingCheck()" style="font-size:16px"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <div class="card" style="flex:1;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:var(--primary)" id="typing-wpm">0</div><div style="font-size:12px;color:var(--text-muted)">WPM</div></div>
+        <div class="card" style="flex:1;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:var(--success)" id="typing-acc">0%</div><div style="font-size:12px;color:var(--text-muted)">정확도</div></div>
+        <div class="card" style="flex:1;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:var(--warning)" id="typing-time">0s</div><div style="font-size:12px;color:var(--text-muted)">시간</div></div>
+      </div>
+      <button class="btn" onclick="App.renderTypingPractice()" style="width:100%;margin-bottom:12px"><i class="fas fa-redo"></i> 새 문장</button>
+      <div class="page-title" style="font-size:14px">🏆 랭킹</div>
+      <div id="typing-ranking">로딩중...</div>
+    `;
+    this._typingStart = null;
+    this._typingDone = false;
+    document.getElementById('typing-input').focus();
+    this._loadTypingRanking();
+  },
+
+  _typingCheck() {
+    if (this._typingDone) return;
+    const target = document.getElementById('typing-target').textContent;
+    const input = document.getElementById('typing-input').value;
+    if (!this._typingStart) this._typingStart = Date.now();
+
+    const elapsed = (Date.now() - this._typingStart) / 1000;
+    const words = input.length / 2.5;
+    const wpm = elapsed > 0 ? Math.round(words / elapsed * 60) : 0;
+    let correct = 0;
+    for (let i = 0; i < input.length; i++) { if (input[i] === target[i]) correct++; }
+    const accuracy = input.length > 0 ? Math.round(correct / input.length * 100) : 0;
+
+    document.getElementById('typing-wpm').textContent = wpm;
+    document.getElementById('typing-acc').textContent = accuracy + '%';
+    document.getElementById('typing-time').textContent = Math.round(elapsed) + 's';
+
+    if (input.length >= target.length) {
+      this._typingDone = true;
+      this.api('/api/typing-record', { method: 'POST', body: { wpm, accuracy } });
+      this.showToast(`완료! ${wpm} WPM, 정확도 ${accuracy}%`, 'success');
+      this._loadTypingRanking();
+    }
+  },
+
+  async _loadTypingRanking() {
+    try {
+      const data = await this.api('/api/typing-ranking');
+      document.getElementById('typing-ranking').innerHTML = data.ranking.length ? data.ranking.map((r, i) => `
+        <div class="card" style="padding:10px;display:flex;align-items:center;gap:10px">
+          <div style="width:24px;text-align:center;font-weight:800;color:${i < 3 ? ['#FFD700','#C0C0C0','#CD7F32'][i] : 'var(--text-muted)'}">${i+1}</div>
+          <div style="flex:1"><b style="font-size:13px">${this.escapeHtml(r.nickname)}</b></div>
+          <div style="font-weight:700;color:var(--primary)">${r.best_wpm} WPM</div>
+        </div>
+      `).join('') : '<div class="empty-state"><p>아직 기록이 없습니다</p></div>';
+    } catch (e) {}
+  },
+
+  // ==================== 오늘 뭐 먹지 ====================
+  _menus: ['김치찌개','된장찌개','비빔밥','불고기','떡볶이','치킨','피자','햄버거','짜장면','짬뽕','삼겹살','돈까스','초밥','라멘','칼국수','냉면','김밥','제육볶음','순두부찌개','부대찌개','탕수육','볶음밥','카레','스파게티','샐러드','샌드위치','우동','떡국','갈비탕','순대국'],
+
+  renderRandomMenu() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <div class="page-title"><i class="fas fa-utensils page-title-icon" style="color:#FF6B9D"></i> 오늘 뭐 먹지?</div>
+      <div class="card" style="padding:40px;text-align:center;margin-bottom:16px">
+        <div style="font-size:60px;margin-bottom:16px" id="menu-emoji">🍽️</div>
+        <div style="font-size:28px;font-weight:800;color:var(--primary)" id="menu-result">버튼을 눌러보세요!</div>
+      </div>
+      <button class="btn btn-primary" onclick="App.spinMenu()" id="menu-btn" style="width:100%;font-size:16px;padding:14px"><i class="fas fa-random"></i> 돌리기!</button>
+    `;
+  },
+
+  spinMenu() {
+    const emojis = ['🍕','🍔','🍜','🍱','🍛','🍗','🥘','🍲','🌮','🍝','🥗','🍙','🍚','🥩','🍖'];
+    const resultEl = document.getElementById('menu-result');
+    const emojiEl = document.getElementById('menu-emoji');
+    const btn = document.getElementById('menu-btn');
+    btn.disabled = true;
+    let count = 0;
+    const interval = setInterval(() => {
+      resultEl.textContent = this._menus[Math.floor(Math.random() * this._menus.length)];
+      emojiEl.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      count++;
+      if (count > 20) {
+        clearInterval(interval);
+        btn.disabled = false;
+        resultEl.style.color = 'var(--primary)';
+        this.showToast(`오늘은 ${resultEl.textContent} 어때요? 🍴`);
+      }
+    }, 80);
+  },
+
+  // ==================== 그림판 ====================
+  renderDrawingBoard() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <div class="page-title"><i class="fas fa-paint-brush page-title-icon" style="color:#E040FB"></i> 그림판</div>
+      <div class="card" style="padding:8px;margin-bottom:12px;text-align:center">
+        <canvas id="draw-canvas" width="350" height="350" style="border:1px solid var(--border);border-radius:8px;background:white;max-width:100%;touch-action:none"></canvas>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;justify-content:center">
+        ${['#000000','#FF0000','#FF6B00','#FFD700','#00CC00','#0066FF','#6C63FF','#FF69B4','#8B4513','#FFFFFF'].map(c => `<div onclick="App._drawColor='${c}';document.querySelectorAll('.dc').forEach(e=>e.style.outline='');this.style.outline='3px solid var(--text)'" class="dc" style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;border:1px solid var(--border)"></div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;justify-content:center">
+        <label style="font-size:13px">굵기</label>
+        <input type="range" id="draw-size" min="1" max="20" value="3" style="flex:1;max-width:150px">
+        <button class="btn" onclick="App._drawEraser=!App._drawEraser;this.style.background=App._drawEraser?'var(--primary)':'';this.style.color=App._drawEraser?'white':''"><i class="fas fa-eraser"></i></button>
+        <button class="btn" onclick="App._clearCanvas()"><i class="fas fa-trash"></i> 지우기</button>
+      </div>
+    `;
+    this._drawColor = '#000000';
+    this._drawEraser = false;
+    this._setupCanvas();
+  },
+
+  _setupCanvas() {
+    const canvas = document.getElementById('draw-canvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let lastX, lastY;
+
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const touch = e.touches ? e.touches[0] : e;
+      return [(touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY];
+    };
+
+    const start = (e) => { e.preventDefault(); drawing = true; [lastX, lastY] = getPos(e); };
+    const draw = (e) => {
+      if (!drawing) return;
+      e.preventDefault();
+      const [x, y] = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(x, y);
+      ctx.strokeStyle = this._drawEraser ? '#FFFFFF' : this._drawColor;
+      ctx.lineWidth = document.getElementById('draw-size').value;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      [lastX, lastY] = [x, y];
+    };
+    const end = () => { drawing = false; };
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseleave', end);
+    canvas.addEventListener('touchstart', start);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', end);
+  },
+
+  _clearCanvas() {
+    const canvas = document.getElementById('draw-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  },
+
+  // ==================== 프로필 꾸미기 ====================
+  async renderProfileFrames() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = '<div class="page-title"><i class="fas fa-palette page-title-icon" style="color:#E040FB"></i> 프로필 꾸미기</div><div id="frames-list">로딩중...</div>';
+    try {
+      const data = await this.api('/api/profile-frames');
+      const container = document.getElementById('frames-list');
+      container.innerHTML = `
+        <div class="card" style="padding:20px;text-align:center;margin-bottom:16px">
+          <div style="position:relative;display:inline-block">
+            <img src="${this.user.profile_image}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;${data.current ? 'border:4px solid ' + (data.frames.find(f => f.id === data.current)?.color === 'rainbow' ? '#FF0000' : data.frames.find(f => f.id === data.current)?.color || 'transparent') : ''}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%236C63FF%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22 fill=%22white%22>👤</text></svg>'">
+          </div>
+          <div style="margin-top:8px;font-weight:700">${this.escapeHtml(this.user.nickname)}</div>
+          ${data.current ? `<button class="btn" onclick="App.equipFrame('')" style="margin-top:8px;font-size:12px">프레임 해제</button>` : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          ${data.frames.map(f => {
+            const isCurrent = data.current === f.id;
+            const borderStyle = f.color === 'rainbow' ? 'background:linear-gradient(135deg,red,orange,yellow,green,blue,purple);' : `background:${f.color};`;
+            return `
+              <div class="card" style="padding:16px;text-align:center;${isCurrent ? 'outline:2px solid var(--primary);' : ''}">
+                <div style="width:60px;height:60px;border-radius:50%;${borderStyle}margin:0 auto 8px;display:flex;align-items:center;justify-content:center">
+                  <div style="width:50px;height:50px;border-radius:50%;background:var(--bg-card)"></div>
+                </div>
+                <div style="font-size:13px;font-weight:600">${f.name}</div>
+                <div style="font-size:12px;color:var(--coin);margin:4px 0"><i class="fas fa-coins"></i> ${f.price}</div>
+                ${isCurrent ? '<div style="font-size:12px;color:var(--success);font-weight:700">사용 중</div>' :
+                  `<button class="btn btn-primary" onclick="App.equipFrame('${f.id}')" style="font-size:12px;padding:4px 12px">적용</button>`}
+              </div>`;
+          }).join('')}
+        </div>
+      `;
+    } catch (e) { document.getElementById('frames-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  async equipFrame(frameId) {
+    try {
+      await this.api('/api/profile-frames/equip', { method: 'POST', body: { frameId } });
+      this.user.profile_frame = frameId;
+      this.showToast(frameId ? '프레임이 적용되었습니다!' : '프레임이 해제되었습니다.', 'success');
+      this.renderProfileFrames();
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  // ==================== AI CHAT ====================
+  _aiHistory: [],
+
+  renderAIChat() {
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <div style="display:flex;flex-direction:column;height:calc(100vh - var(--header-h) - var(--bottom-nav-h) - 16px)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <button class="page-back" onclick="App.navigate('home')"><i class="fas fa-arrow-left"></i></button>
+          <div class="page-title" style="margin-bottom:0"><i class="fas fa-robot page-title-icon" style="color:#6C63FF"></i> AI 채팅</div>
+          <button class="btn" onclick="App._aiHistory=[];App.renderAIChat()" style="margin-left:auto;font-size:12px;padding:6px 12px"><i class="fas fa-trash"></i> 초기화</button>
+        </div>
+        <div id="ai-messages" style="flex:1;overflow-y:auto;padding-bottom:8px">
+          <div style="display:flex;gap:10px;margin-bottom:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6C63FF,#FF6B9D);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-robot" style="color:white;font-size:16px"></i></div>
+            <div class="card" style="padding:12px;max-width:80%;margin:0">안녕! 나는 ${this.getBrandName()} AI야 🤖<br>무엇이든 물어봐!</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
+          <input type="text" id="ai-input" class="input" placeholder="메시지를 입력하세요..." style="flex:1" onkeypress="if(event.key==='Enter')App.sendAIMessage()">
+          <button class="btn btn-primary" onclick="App.sendAIMessage()" id="ai-send-btn" style="padding:10px 16px"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+    `;
+    const container = document.getElementById('ai-messages');
+    for (const msg of this._aiHistory) {
+      this._appendAIBubble(container, msg.role, msg.text);
+    }
+    container.scrollTop = container.scrollHeight;
+  },
+
+  _appendAIBubble(container, role, text) {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;gap:10px;margin-bottom:12px;' + (role === 'user' ? 'flex-direction:row-reverse' : '');
+    const avatar = role === 'user'
+      ? `<img src="${this.user.profile_image}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%236C63FF%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22 fill=%22white%22>👤</text></svg>'">`
+      : `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6C63FF,#FF6B9D);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-robot" style="color:white;font-size:16px"></i></div>`;
+    const bgColor = role === 'user' ? 'var(--primary)' : 'var(--bg-card)';
+    const textColor = role === 'user' ? 'white' : 'var(--text)';
+    div.innerHTML = `${avatar}<div style="padding:10px 14px;border-radius:16px;max-width:80%;background:${bgColor};color:${textColor};font-size:14px;line-height:1.6;white-space:pre-wrap;box-shadow:var(--shadow)">${this.escapeHtml(text)}</div>`;
+    container.appendChild(div);
+  },
+
+  async sendAIMessage() {
+    const input = document.getElementById('ai-input');
+    const message = input.value.trim();
+    if (!message) return;
+    input.value = '';
+
+    const container = document.getElementById('ai-messages');
+    this._aiHistory.push({ role: 'user', text: message });
+    this._appendAIBubble(container, 'user', message);
+
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.cssText = 'display:flex;gap:10px;margin-bottom:12px';
+    loadingDiv.innerHTML = `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6C63FF,#FF6B9D);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-robot" style="color:white;font-size:16px"></i></div><div class="card" style="padding:12px;margin:0"><i class="fas fa-spinner fa-spin"></i> 생각 중...</div>`;
+    container.appendChild(loadingDiv);
+    container.scrollTop = container.scrollHeight;
+
+    const sendBtn = document.getElementById('ai-send-btn');
+    sendBtn.disabled = true;
+
+    try {
+      const data = await this.api('/api/ai/chat', {
+        method: 'POST',
+        body: { message, history: this._aiHistory.slice(-10) }
+      });
+      loadingDiv.remove();
+      this._aiHistory.push({ role: 'ai', text: data.reply });
+      this._appendAIBubble(container, 'ai', data.reply);
+    } catch (e) {
+      loadingDiv.remove();
+      this._appendAIBubble(container, 'ai', '⚠️ ' + e.message);
+    }
+    sendBtn.disabled = false;
+    container.scrollTop = container.scrollHeight;
+    input.focus();
+  },
+
   // ==================== RELEASE NOTES ====================
   async renderReleaseNotes() {
     const content = document.getElementById('page-content');
@@ -2365,6 +3057,10 @@ const App = {
         </div>
         <div class="settings-item" onclick="App.showBlockList()">
           <div class="settings-item-left"><i class="fas fa-ban"></i><span class="settings-item-label">차단 목록</span></div>
+          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="settings-item" onclick="App.navigate('ai-chat')">
+          <div class="settings-item-left"><i class="fas fa-robot" style="color:#6C63FF"></i><span class="settings-item-label">AI 채팅</span></div>
           <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
         </div>
         <div class="settings-item" onclick="App.navigate('release-notes')">
