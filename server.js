@@ -2516,6 +2516,30 @@ app.post('/api/upload', auth, upload.single('file'), (req, res) => {
   res.json({ url: `/uploads/${req.file.filename}` });
 });
 
+// ==================== 릴리즈 노트 ====================
+app.get('/api/release-notes', (req, res) => {
+  const notes = db.prepare('SELECT rn.*, u.nickname FROM release_notes rn JOIN users u ON rn.created_by = u.id ORDER BY rn.created_at DESC').all();
+  res.json({ notes });
+});
+
+app.post('/api/release-notes', adminAuth, (req, res) => {
+  const { version, title, content } = req.body;
+  if (!version || !title || !content) return res.status(400).json({ error: '버전, 제목, 내용을 모두 입력해주세요.' });
+  db.prepare('INSERT INTO release_notes (version, title, content, created_by) VALUES (?, ?, ?, ?)').run(version, title, content, req.user.id);
+  res.json({ message: '릴리즈 노트가 등록되었습니다.' });
+});
+
+app.put('/api/release-notes/:id', adminAuth, (req, res) => {
+  const { version, title, content } = req.body;
+  db.prepare('UPDATE release_notes SET version = ?, title = ?, content = ? WHERE id = ?').run(version, title, content, req.params.id);
+  res.json({ message: '릴리즈 노트가 수정되었습니다.' });
+});
+
+app.delete('/api/release-notes/:id', adminAuth, (req, res) => {
+  db.prepare('DELETE FROM release_notes WHERE id = ?').run(req.params.id);
+  res.json({ message: '릴리즈 노트가 삭제되었습니다.' });
+});
+
 // SPA 라우팅
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

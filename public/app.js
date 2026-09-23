@@ -417,6 +417,7 @@ const App = {
       titles: () => this.renderTitles(),
       'my-reports': () => this.renderMyReports(),
       polls: () => this.renderPolls(),
+      'release-notes': () => this.renderReleaseNotes(),
     };
 
     if (pages[page]) pages[page]();
@@ -2071,6 +2072,100 @@ const App = {
     } catch (e) { document.getElementById('my-reports-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
   },
 
+  // ==================== RELEASE NOTES ====================
+  async renderReleaseNotes() {
+    const content = document.getElementById('page-content');
+    const isAdmin = this.user.role === 'admin';
+    content.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div class="page-title" style="margin-bottom:0"><i class="fas fa-clipboard-list page-title-icon" style="color:#6C63FF"></i> 릴리즈 노트</div>
+        ${isAdmin ? '<button class="btn btn-primary" onclick="App.showReleaseNoteForm()" style="font-size:13px;padding:8px 16px"><i class="fas fa-plus"></i> 작성</button>' : ''}
+      </div>
+      <div id="release-notes-list">로딩중...</div>
+    `;
+    try {
+      const data = await this.api('/api/release-notes');
+      const container = document.getElementById('release-notes-list');
+      container.innerHTML = data.notes.length ? data.notes.map(n => `
+        <div class="card" style="padding:16px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div>
+              <span style="background:var(--primary);color:white;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:bold">v${this.escapeHtml(n.version)}</span>
+              <b style="margin-left:8px;font-size:15px">${this.escapeHtml(n.title)}</b>
+            </div>
+            ${isAdmin ? `<div style="display:flex;gap:8px">
+              <button class="btn" onclick="App.showReleaseNoteForm(${n.id},'${this.escapeHtml(n.version)}','${this.escapeHtml(n.title)}')" style="font-size:12px;padding:4px 10px"><i class="fas fa-edit"></i></button>
+              <button class="btn" onclick="App.deleteReleaseNote(${n.id})" style="font-size:12px;padding:4px 10px;color:var(--danger)"><i class="fas fa-trash"></i></button>
+            </div>` : ''}
+          </div>
+          <div style="white-space:pre-wrap;font-size:14px;color:var(--text-secondary);line-height:1.6">${this.escapeHtml(n.content)}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:10px">${new Date(n.created_at).toLocaleDateString('ko')} · ${this.escapeHtml(n.nickname)}</div>
+        </div>
+      `).join('') : '<div class="empty-state"><p>릴리즈 노트가 없습니다</p></div>';
+    } catch (e) { document.getElementById('release-notes-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  showReleaseNoteForm(id, version, title) {
+    const isEdit = !!id;
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal" style="max-width:500px">
+        <div class="modal-header"><h3>${isEdit ? '릴리즈 노트 수정' : '릴리즈 노트 작성'}</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+        <div class="modal-body">
+          <input type="text" id="rn-version" class="input" placeholder="버전 (예: 1.2.0)" value="${version || ''}" style="margin-bottom:12px">
+          <input type="text" id="rn-title" class="input" placeholder="제목" value="${title || ''}" style="margin-bottom:12px">
+          <textarea id="rn-content" class="input" placeholder="변경 내용을 입력하세요&#10;- 새 기능&#10;- 버그 수정&#10;- 개선사항" rows="10" style="margin-bottom:12px"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="this.closest('.modal-overlay').remove()">취소</button>
+          <button class="btn btn-primary" onclick="App.submitReleaseNote(${id || 0})">${isEdit ? '수정' : '등록'}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    if (isEdit) {
+      const noteCard = document.querySelectorAll('#release-notes-list .card')[0];
+      if (noteCard) {
+        const allCards = document.querySelectorAll('#release-notes-list .card');
+        for (const card of allCards) {
+          const editBtn = card.querySelector(`button[onclick*="showReleaseNoteForm(${id}"]`);
+          if (editBtn) {
+            const contentEl = card.querySelector('div[style*="pre-wrap"]');
+            if (contentEl) document.getElementById('rn-content').value = contentEl.textContent;
+            break;
+          }
+        }
+      }
+    }
+  },
+
+  async submitReleaseNote(id) {
+    const version = document.getElementById('rn-version').value.trim();
+    const title = document.getElementById('rn-title').value.trim();
+    const content = document.getElementById('rn-content').value.trim();
+    if (!version || !title || !content) return alert('모든 항목을 입력해주세요');
+    try {
+      if (id) {
+        await this.api(`/api/release-notes/${id}`, { method: 'PUT', body: { version, title, content } });
+      } else {
+        await this.api('/api/release-notes', { method: 'POST', body: { version, title, content } });
+      }
+      document.querySelector('.modal-overlay')?.remove();
+      this.showToast(id ? '수정되었습니다' : '등록되었습니다', 'success');
+      this.renderReleaseNotes();
+    } catch (e) { alert(e.message); }
+  },
+
+  async deleteReleaseNote(id) {
+    if (!confirm('이 릴리즈 노트를 삭제하시겠습니까?')) return;
+    try {
+      await this.api(`/api/release-notes/${id}`, { method: 'DELETE' });
+      this.showToast('삭제되었습니다', 'success');
+      this.renderReleaseNotes();
+    } catch (e) { alert(e.message); }
+  },
+
   // ==================== POLLS ====================
   async renderPolls() {
     const content = document.getElementById('page-content');
@@ -2252,6 +2347,10 @@ const App = {
         </div>
         <div class="settings-item" onclick="App.showBlockList()">
           <div class="settings-item-left"><i class="fas fa-ban"></i><span class="settings-item-label">차단 목록</span></div>
+          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="settings-item" onclick="App.navigate('release-notes')">
+          <div class="settings-item-left"><i class="fas fa-clipboard-list" style="color:#6C63FF"></i><span class="settings-item-label">릴리즈 노트</span></div>
           <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
         </div>
         <div class="settings-item" onclick="App.testPush()">

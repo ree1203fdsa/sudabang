@@ -18,7 +18,7 @@ const ALL_TABLES = [
   'referral_codes', 'referral_uses', 'coupons', 'coupon_uses',
   'achievements', 'user_achievements', 'user_mission_progress',
   'event_banners', 'minigame_records', 'gallery_posts', 'gallery_photos',
-  'level_rewards', 'user_titles', 'report_auto_actions'
+  'level_rewards', 'user_titles', 'report_auto_actions', 'release_notes'
 ];
 
 class BetterSqlite3Compat {
@@ -771,6 +771,17 @@ async function initDatabase() {
     report_count INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
+  )`);
+
+  // 릴리즈 노트
+  db.exec(`CREATE TABLE IF NOT EXISTS release_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    version TEXT NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_by INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
   )`);
 
   const firebaseData = await loadFromFirebase();
