@@ -139,6 +139,12 @@ function adminAuth(req, res, next) {
 function teacherAuth(req, res, next) {
   auth(req, res, () => {
     if (req.user.role !== 'teacher' && req.user.role !== 'admin') return res.status(403).json({ error: '선생님 권한이 필요합니다.' });
+    let teacher = db.prepare('SELECT * FROM teachers WHERE user_id = ?').get(req.user.id);
+    if (!teacher) {
+      db.prepare('INSERT INTO teachers (user_id) VALUES (?)').run(req.user.id);
+      teacher = db.prepare('SELECT * FROM teachers WHERE user_id = ?').get(req.user.id);
+    }
+    req.teacher = teacher;
     next();
   });
 }
@@ -1118,7 +1124,7 @@ app.post('/api/teacher/groups', teacherAuth, (req, res) => {
 });
 
 app.get('/api/teacher/groups', teacherAuth, (req, res) => {
-  const teacher = db.prepare('SELECT * FROM teachers WHERE user_id = ?').get(req.user.id);
+  const teacher = req.teacher;
   const groups = db.prepare(`
     SELECT sg.*, (SELECT COUNT(*) FROM school_group_members WHERE group_id = sg.id) as member_count
     FROM school_groups sg WHERE sg.teacher_id = ?
@@ -1244,11 +1250,19 @@ app.get('/api/student/my-groups', auth, (req, res) => {
 
 // 학생용 - 출결 등록
 app.post('/api/student/attendance', auth, (req, res) => {
-  if (req.user.role !== 'student') return res.status(403).json({ error: '학생만 사용할 수 있습니다.' });
   const { groupId } = req.body;
   const today = new Date().toISOString().split('T')[0];
-  const student = db.prepare('SELECT * FROM students WHERE user_id = ?').get(req.user.id);
-  if (!student) return res.status(400).json({ error: '학생 정보를 찾을 수 없습니다.' });
+
+  const member = db.prepare('SELECT * FROM school_group_members WHERE group_id = ? AND user_id = ?').get(groupId, req.user.id);
+  if (!member) return res.status(403).json({ error: '해당 그룹의 멤버가 아닙니다.' });
+
+  let student = db.prepare('SELECT * FROM students WHERE user_id = ?').get(req.user.id);
+  if (!student) {
+    const group = db.prepare('SELECT * FROM school_groups WHERE id = ?').get(groupId);
+    const teacherId = group ? group.teacher_id : 0;
+    db.prepare('INSERT INTO students (user_id, teacher_id, name) VALUES (?, ?, ?)').run(req.user.id, teacherId, req.user.nickname);
+    student = db.prepare('SELECT * FROM students WHERE user_id = ?').get(req.user.id);
+  }
 
   const existing = db.prepare('SELECT id FROM attendance_school WHERE student_id = ? AND group_id = ? AND date = ?').get(student.id, groupId, today);
   if (existing) return res.status(400).json({ error: '오늘은 이미 출결 등록했습니다.' });
@@ -1259,12 +1273,43 @@ app.post('/api/student/attendance', auth, (req, res) => {
 
 // 학생용 - 출결 기록 조회
 app.get('/api/student/attendance-history', auth, (req, res) => {
-  if (req.user.role !== 'student') return res.status(403).json({ error: '학생만 사용할 수 있습니다.' });
   const { groupId } = req.query;
-  const student = db.prepare('SELECT * FROM students WHERE user_id = ?').get(req.user.id);
-  if (!student) return res.status(400).json({ error: '학생 정보를 찾을 수 없습니다.' });
+
+  const member = db.prepare('SELECT * FROM school_group_members WHERE group_id = ? AND user_id = ?').get(groupId, req.user.id);
+  if (!member) return res.status(403).json({ error: '해당 그룹의 멤버가 아닙니다.' });
+
+  let student = db.prepare('SELECT * FROM students WHERE user_id = ?').get(req.user.id);
+  if (!student) return res.json({ records: [] });
   const records = db.prepare('SELECT date, status FROM attendance_school WHERE student_id = ? AND group_id = ? ORDER BY date DESC LIMIT 30').all(student.id, groupId);
   res.json({ records });
+});
+
+// 학교 스케줄 관리
+app.get('/api/school-schedules/:groupId', auth, (req, res) => {
+  const { month } = req.query;
+  let schedules;
+  if (month) {
+    schedules = db.prepare(`SELECT ss.*, t.user_id as teacher_user_id FROM school_schedules ss LEFT JOIN teachers t ON ss.teacher_id = t.id WHERE ss.group_id = ? AND ss.schedule_date LIKE ? ORDER BY ss.schedule_date`).all(req.params.groupId, month + '%');
+  } else {
+    schedules = db.prepare(`SELECT ss.*, t.user_id as teacher_user_id FROM school_schedules ss LEFT JOIN teachers t ON ss.teacher_id = t.id WHERE ss.group_id = ? ORDER BY ss.schedule_date`).all(req.params.groupId);
+  }
+  res.json({ schedules });
+});
+
+app.post('/api/school-schedules', teacherAuth, (req, res) => {
+  const { groupId, title, description, schedule_date, schedule_type, color } = req.body;
+  if (!title || !schedule_date || !groupId) return res.status(400).json({ error: '필수 항목을 입력하세요.' });
+  const teacher = db.prepare('SELECT * FROM teachers WHERE user_id = ?').get(req.user.id);
+  if (!teacher) return res.status(400).json({ error: '선생님 정보를 찾을 수 없습니다.' });
+  db.prepare('INSERT INTO school_schedules (group_id, teacher_id, title, description, schedule_date, schedule_type, color) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+    groupId, teacher.id, title, description || '', schedule_date, schedule_type || 'event', color || '#6C63FF'
+  );
+  res.json({ message: '스케줄이 등록되었습니다.' });
+});
+
+app.delete('/api/school-schedules/:id', teacherAuth, (req, res) => {
+  db.prepare('DELETE FROM school_schedules WHERE id = ?').run(req.params.id);
+  res.json({ message: '스케줄이 삭제되었습니다.' });
 });
 
 // 선생님 채팅

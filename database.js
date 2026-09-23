@@ -20,7 +20,8 @@ const ALL_TABLES = [
   'event_banners', 'minigame_records', 'gallery_posts', 'gallery_photos',
   'level_rewards', 'user_titles', 'report_auto_actions', 'release_notes',
   'popup_notices', 'events', 'class_votes', 'class_vote_options', 'class_vote_responses',
-  'typing_records', 'seat_assignments', 'stickers', 'user_stickers'
+  'typing_records', 'seat_assignments', 'stickers', 'user_stickers',
+  'school_schedules'
 ];
 
 class BetterSqlite3Compat {
@@ -277,6 +278,20 @@ async function initDatabase() {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES students(id),
     FOREIGN KEY (group_id) REFERENCES school_groups(id)
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS school_schedules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER NOT NULL,
+    teacher_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    schedule_date TEXT NOT NULL,
+    schedule_type TEXT DEFAULT 'event',
+    color TEXT DEFAULT '#6C63FF',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES school_groups(id),
+    FOREIGN KEY (teacher_id) REFERENCES teachers(id)
   )`);
 
   db.exec(`CREATE TABLE IF NOT EXISTS school_announcements (

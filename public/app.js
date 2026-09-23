@@ -424,6 +424,7 @@ const App = {
       school: () => this.renderSchool(),
       students: () => this.renderStudents(),
       'school-attendance': () => this.renderSchoolAttendance(),
+      'school-schedules': () => this.renderSchoolSchedules(),
       'school-announcements': () => this.renderSchoolAnnouncements(),
       'school-albums': () => this.renderSchoolAlbums(),
       'teacher-chat': () => this.renderTeacherChat(),
@@ -3818,13 +3819,20 @@ const App = {
           <button class="btn btn-primary btn-small btn-pill" onclick="App.showCreateSchoolGroup()"><i class="fas fa-plus"></i> 그룹</button>
         </div>
         ${data.groups.map(g => `
-          <div class="card" style="cursor:pointer">
-            <div style="display:flex;align-items:center;gap:12px">
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
               <div style="width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#3B82F6,#60A5FA);display:flex;align-items:center;justify-content:center;color:white;font-size:24px">🏫</div>
               <div style="flex:1">
                 <div style="font-weight:700;font-size:16px">${this.escapeHtml(g.school_name)}</div>
                 <div style="font-size:13px;color:var(--text-secondary)"><i class="fas fa-users"></i> ${g.member_count}명</div>
               </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary btn-small btn-pill" onclick="App.navigate('school-attendance')"><i class="fas fa-clipboard-check"></i> 출결</button>
+              <button class="btn btn-secondary btn-small btn-pill" onclick="App._scheduleGroupId=${g.id};App.navigate('school-schedules')"><i class="fas fa-calendar-alt"></i> 스케줄</button>
+              <button class="btn btn-secondary btn-small btn-pill" onclick="App.navigate('students')"><i class="fas fa-users"></i> 학생</button>
+              <button class="btn btn-secondary btn-small btn-pill" onclick="App.navigate('school-announcements')"><i class="fas fa-bullhorn"></i> 공지</button>
+              <button class="btn btn-secondary btn-small btn-pill" onclick="App.navigate('school-albums')"><i class="fas fa-images"></i> 앨범</button>
             </div>
           </div>
         `).join('')}
@@ -3950,6 +3958,149 @@ const App = {
       this.showToast('출결이 기록되었습니다.', 'success');
       this.renderSchoolAttendance();
     } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  // ==================== 학교 스케줄 ====================
+  _scheduleGroupId: null,
+  _scheduleMonth: new Date().toISOString().slice(0, 7),
+
+  async renderSchoolSchedules() {
+    const content = document.getElementById('page-content');
+    const isTeacher = this.user.role === 'teacher' || this.user.role === 'admin';
+
+    let groupId = this._scheduleGroupId;
+    if (!groupId) {
+      try {
+        const endpoint = isTeacher ? '/api/teacher/groups' : '/api/student/my-groups';
+        const data = await this.api(endpoint);
+        const groups = data.groups;
+        if (!groups.length) {
+          content.innerHTML = '<div class="empty-state"><p>소속된 학교 그룹이 없습니다.</p></div>';
+          return;
+        }
+        groupId = groups[0].id;
+        this._scheduleGroupId = groupId;
+      } catch (e) { content.innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; return; }
+    }
+
+    const [year, month] = this._scheduleMonth.split('-').map(Number);
+    const monthName = `${year}년 ${month}월`;
+
+    content.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        <button class="page-back" onclick="App.navigate('${isTeacher ? 'school' : 'student-dashboard'}')"><i class="fas fa-arrow-left"></i></button>
+        <div class="page-title" style="margin-bottom:0"><i class="fas fa-calendar-alt" style="color:#3B82F6"></i> 학교 스케줄</div>
+      </div>
+      <div class="card" style="padding:16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <button class="btn" onclick="App._schPrev()"><i class="fas fa-chevron-left"></i></button>
+          <b style="font-size:16px">${monthName}</b>
+          <button class="btn" onclick="App._schNext()"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:13px">
+          ${'일,월,화,수,목,금,토'.split(',').map((d, i) => `<div style="padding:6px;font-weight:700;color:${i === 0 ? 'var(--danger)' : i === 6 ? 'var(--primary)' : 'var(--text-secondary)'}">${d}</div>`).join('')}
+          <div id="sch-cal-days"></div>
+        </div>
+      </div>
+      ${isTeacher ? '<button class="btn btn-primary" onclick="App.showAddSchedule()" style="width:100%;margin-bottom:12px"><i class="fas fa-plus"></i> 스케줄 추가</button>' : ''}
+      <div id="sch-list">로딩중...</div>
+    `;
+    this._loadSchoolSchedules();
+  },
+
+  async _loadSchoolSchedules() {
+    const groupId = this._scheduleGroupId;
+    const [year, month] = this._scheduleMonth.split('-').map(Number);
+    const isTeacher = this.user.role === 'teacher' || this.user.role === 'admin';
+
+    try {
+      const data = await this.api(`/api/school-schedules/${groupId}?month=${this._scheduleMonth}`);
+      const schedDates = {};
+      for (const s of data.schedules) {
+        if (!schedDates[s.schedule_date]) schedDates[s.schedule_date] = [];
+        schedDates[s.schedule_date].push(s);
+      }
+
+      const firstDay = new Date(year, month - 1, 1).getDay();
+      const lastDate = new Date(year, month, 0).getDate();
+      const today = new Date().toISOString().split('T')[0];
+      let calHtml = '';
+      for (let i = 0; i < firstDay; i++) calHtml += '<div></div>';
+      for (let d = 1; d <= lastDate; d++) {
+        const dateStr = `${this._scheduleMonth}-${String(d).padStart(2, '0')}`;
+        const items = schedDates[dateStr];
+        const isToday = dateStr === today;
+        calHtml += `<div style="padding:4px;border-radius:8px;${isToday ? 'background:var(--primary);color:white;font-weight:700;' : ''}">${d}${items ? items.map(s => `<div style="width:6px;height:6px;border-radius:50%;background:${s.color};margin:1px auto 0;display:inline-block"></div>`).join('') : ''}</div>`;
+      }
+      document.getElementById('sch-cal-days').outerHTML = calHtml;
+
+      const typeLabels = { exam: '📝 시험', event: '🎉 행사', holiday: '🏖️ 휴일', deadline: '⏰ 마감', other: '📌 기타' };
+      const typeColors = { exam: '#FF4757', event: '#6C63FF', holiday: '#2ED573', deadline: '#FF9800', other: '#999' };
+
+      document.getElementById('sch-list').innerHTML = data.schedules.length ? data.schedules.map(s => `
+        <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="width:8px;height:44px;border-radius:4px;background:${s.color || typeColors[s.schedule_type] || '#6C63FF'}"></div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px">${typeLabels[s.schedule_type] || '📌'}</span>
+              <b style="font-size:14px">${this.escapeHtml(s.title)}</b>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${s.schedule_date}${s.description ? ' · ' + this.escapeHtml(s.description) : ''}</div>
+          </div>
+          ${isTeacher ? `<button class="btn" onclick="App.deleteSchedule(${s.id})" style="font-size:12px;padding:4px 8px;color:var(--danger)"><i class="fas fa-trash"></i></button>` : ''}
+        </div>
+      `).join('') : '<div class="empty-state"><p>이번 달 스케줄이 없습니다</p></div>';
+    } catch (e) { document.getElementById('sch-list').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  _schPrev() { const [y, m] = this._scheduleMonth.split('-').map(Number); this._scheduleMonth = m === 1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`; this.renderSchoolSchedules(); },
+  _schNext() { const [y, m] = this._scheduleMonth.split('-').map(Number); this._scheduleMonth = m === 12 ? `${y+1}-01` : `${y}-${String(m+1).padStart(2,'0')}`; this.renderSchoolSchedules(); },
+
+  showAddSchedule() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal" style="max-width:420px">
+        <div class="modal-header"><h3>스케줄 추가</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+        <div class="modal-body">
+          <input type="text" id="sch-title" class="input" placeholder="제목 (예: 중간고사, 체육대회)" style="margin-bottom:12px">
+          <input type="date" id="sch-date" class="input" value="${this._scheduleMonth}-01" style="margin-bottom:12px">
+          <select id="sch-type" class="input" style="margin-bottom:12px">
+            <option value="exam">📝 시험/평가</option>
+            <option value="event">🎉 학교 행사</option>
+            <option value="holiday">🏖️ 휴일</option>
+            <option value="deadline">⏰ 마감</option>
+            <option value="other">📌 기타</option>
+          </select>
+          <input type="text" id="sch-desc" class="input" placeholder="설명 (선택)" style="margin-bottom:12px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${['#FF4757','#6C63FF','#2ED573','#FFD700','#FF9800','#1E90FF','#E040FB'].map(c => `<div onclick="document.getElementById('sch-color').value='${c}';document.querySelectorAll('.sc-c').forEach(e=>e.style.outline='');this.style.outline='3px solid var(--text)'" class="sc-c" style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer"></div>`).join('')}
+          </div>
+          <input type="hidden" id="sch-color" value="#6C63FF">
+        </div>
+        <div class="modal-footer"><button class="btn" onclick="this.closest('.modal-overlay').remove()">취소</button><button class="btn btn-primary" onclick="App.submitSchedule()">추가</button></div>
+      </div>`;
+    document.body.appendChild(modal);
+  },
+
+  async submitSchedule() {
+    const title = document.getElementById('sch-title').value.trim();
+    const schedule_date = document.getElementById('sch-date').value;
+    const schedule_type = document.getElementById('sch-type').value;
+    const description = document.getElementById('sch-desc').value.trim();
+    const color = document.getElementById('sch-color').value;
+    if (!title || !schedule_date) return alert('제목과 날짜를 입력하세요');
+    try {
+      await this.api('/api/school-schedules', { method: 'POST', body: { groupId: this._scheduleGroupId, title, description, schedule_date, schedule_type, color } });
+      document.querySelector('.modal-overlay')?.remove();
+      this.showToast('스케줄이 추가되었습니다!', 'success');
+      this.renderSchoolSchedules();
+    } catch (e) { alert(e.message); }
+  },
+
+  async deleteSchedule(id) {
+    if (!confirm('스케줄을 삭제하시겠습니까?')) return;
+    try { await this.api(`/api/school-schedules/${id}`, { method: 'DELETE' }); this.renderSchoolSchedules(); } catch (e) { alert(e.message); }
   },
 
   async renderSchoolAnnouncements() {
@@ -4214,6 +4365,7 @@ const App = {
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-primary btn-small btn-pill" onclick="App.studentCheckAttendance(${g.id})"><i class="fas fa-check"></i> 출결</button>
+              <button class="btn btn-secondary btn-small btn-pill" onclick="App._scheduleGroupId=${g.id};App.navigate('school-schedules')"><i class="fas fa-calendar-alt"></i> 스케줄</button>
               <button class="btn btn-secondary btn-small btn-pill" onclick="App.viewStudentAnnouncements(${g.id})"><i class="fas fa-bullhorn"></i> 공지</button>
               <button class="btn btn-secondary btn-small btn-pill" onclick="App.viewStudentAlbums(${g.id})"><i class="fas fa-images"></i> 앨범</button>
             </div>
