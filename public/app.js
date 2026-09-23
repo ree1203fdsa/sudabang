@@ -56,13 +56,16 @@ const App = {
       }
     }
     const res = await fetch(url, { ...options, headers });
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error('서버 응답 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'); }
     if (!res.ok) throw new Error(data.error || '오류가 발생했습니다.');
     return data;
   },
 
   // ==================== SOCKET ====================
   connectSocket() {
+    if (typeof io === 'undefined') return;
     if (this.socket) this.socket.disconnect();
     this.socket = io({ auth: { token: this.token } });
 
