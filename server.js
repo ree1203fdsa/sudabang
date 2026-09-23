@@ -260,8 +260,8 @@ app.post('/api/auth/register', upload.single('profileImage'), (req, res) => {
         db.prepare('UPDATE referral_codes SET use_count = use_count + 1 WHERE id = ?').run(refCode.id);
         if (refCode.reward_coins > 0) {
           db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(refCode.reward_coins, result.lastInsertRowid);
-          db.prepare('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)').run(
-            result.lastInsertRowid, refCode.reward_coins, 'referral', '지인 추천 보상'
+          db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(
+            result.lastInsertRowid, refCode.reward_coins, '지인 추천 보상'
           );
         }
       }
@@ -1243,6 +1243,16 @@ app.post('/api/student/attendance', auth, (req, res) => {
   res.json({ message: '출결이 등록되었습니다.' });
 });
 
+// 학생용 - 출결 기록 조회
+app.get('/api/student/attendance-history', auth, (req, res) => {
+  if (req.user.role !== 'student') return res.status(403).json({ error: '학생만 사용할 수 있습니다.' });
+  const { groupId } = req.query;
+  const student = db.prepare('SELECT * FROM students WHERE user_id = ?').get(req.user.id);
+  if (!student) return res.status(400).json({ error: '학생 정보를 찾을 수 없습니다.' });
+  const records = db.prepare('SELECT date, status FROM attendance_school WHERE student_id = ? AND group_id = ? ORDER BY date DESC LIMIT 30').all(student.id, groupId);
+  res.json({ records });
+});
+
 // 선생님 채팅
 app.get('/api/teacher/chat-rooms', teacherAuth, (req, res) => {
   const rooms = db.prepare('SELECT * FROM teacher_chat_rooms ORDER BY created_at DESC').all();
@@ -1285,8 +1295,8 @@ app.post('/api/coupons/redeem', auth, (req, res) => {
     db.prepare('UPDATE coupons SET use_count = use_count + 1 WHERE id = ?').run(coupon.id);
     if (coupon.reward_coins > 0) {
       db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(coupon.reward_coins, req.user.id);
-      db.prepare('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)').run(
-        req.user.id, coupon.reward_coins, 'coupon', `쿠폰 사용: ${coupon.description || coupon.code}`
+      db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(
+        req.user.id, coupon.reward_coins, `쿠폰 사용: ${coupon.description || coupon.code}`
       );
     }
     const user = db.prepare('SELECT coins FROM users WHERE id = ?').get(req.user.id);
@@ -1603,8 +1613,8 @@ app.post('/api/missions/:key/claim', auth, (req, res) => {
   if (prog.claimed) return res.status(400).json({ error: '이미 보상을 받았습니다.' });
   db.prepare('UPDATE user_mission_progress SET claimed = 1 WHERE id = ?').run(prog.id);
   db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(mission.reward, req.user.id);
-  db.prepare('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)').run(
-    req.user.id, mission.reward, 'mission', `일일 미션: ${mission.name}`
+  db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(
+    req.user.id, mission.reward, `일일 미션: ${mission.name}`
   );
   const user = db.prepare('SELECT coins FROM users WHERE id = ?').get(req.user.id);
   res.json({ message: `${mission.reward} 코인을 받았습니다!`, coins: user.coins });
@@ -1685,8 +1695,8 @@ function checkAchievements(userId) {
       db.prepare('INSERT OR IGNORE INTO user_achievements (user_id, achievement_id) VALUES (?, ?)').run(userId, ach.id);
       if (ach.reward_coins > 0) {
         db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(ach.reward_coins, userId);
-        db.prepare('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)').run(
-          userId, ach.reward_coins, 'achievement', `업적 달성: ${ach.name}`
+        db.prepare('INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)').run(
+          userId, ach.reward_coins, `업적 달성: ${ach.name}`
         );
       }
       createNotification(userId, 'achievement', '업적 달성!', `"${ach.name}" 업적을 달성했어요! ${ach.icon}`);
@@ -2418,6 +2428,86 @@ app.get('/api/rooms/:id/messages', auth, (req, res) => {
     LIMIT 200
   `).all(req.params.id);
   res.json({ messages });
+});
+
+// HTTP 채팅 메시지 전송 (Socket.IO 대체)
+app.post('/api/rooms/:id/messages', auth, (req, res) => {
+  const { content, type } = req.body;
+  if (!content) return res.status(400).json({ error: '메시지를 입력해주세요.' });
+  const roomId = parseInt(req.params.id);
+
+  const member = db.prepare('SELECT * FROM chat_room_members WHERE room_id = ? AND user_id = ?').get(roomId, req.user.id);
+  if (!member) return res.status(403).json({ error: '채팅방 멤버가 아닙니다.' });
+
+  if (req.user.chat_restricted) return res.status(403).json({ error: '채팅이 제한되었습니다.' });
+
+  let filteredContent = content;
+  if (type !== 'image') {
+    if (containsBadWords(content)) {
+      filteredContent = filterBadWords(content);
+    }
+  }
+
+  const result = db.prepare('INSERT INTO messages (room_id, user_id, content, type) VALUES (?, ?, ?, ?)').run(
+    roomId, req.user.id, filteredContent, type || 'text'
+  );
+  db.prepare('UPDATE chat_rooms SET last_message = ?, last_message_at = CURRENT_TIMESTAMP WHERE id = ?').run(
+    filteredContent.substring(0, 100), roomId
+  );
+
+  const msg = {
+    id: result.lastInsertRowid,
+    room_id: roomId,
+    user_id: req.user.id,
+    content: filteredContent,
+    type: type || 'text',
+    nickname: req.user.nickname,
+    profile_image: req.user.profile_image,
+    level: req.user.level,
+    created_at: new Date().toISOString()
+  };
+
+  if (io) io.to(`room_${roomId}`).emit('chatMessage', msg);
+  res.json({ message: msg });
+});
+
+// HTTP DM 메시지 전송
+app.post('/api/dm/:roomId/messages', auth, (req, res) => {
+  const { content } = req.body;
+  if (!content) return res.status(400).json({ error: '메시지를 입력해주세요.' });
+  const roomId = parseInt(req.params.roomId);
+
+  const room = db.prepare('SELECT * FROM dm_rooms WHERE id = ? AND (user1_id = ? OR user2_id = ?)').get(roomId, req.user.id, req.user.id);
+  if (!room) return res.status(403).json({ error: '대화방을 찾을 수 없습니다.' });
+
+  const result = db.prepare('INSERT INTO dm_messages (room_id, sender_id, content) VALUES (?, ?, ?)').run(
+    roomId, req.user.id, content
+  );
+
+  const msg = {
+    id: result.lastInsertRowid,
+    room_id: roomId,
+    sender_id: req.user.id,
+    content,
+    nickname: req.user.nickname,
+    profile_image: req.user.profile_image,
+    created_at: new Date().toISOString()
+  };
+  res.json({ message: msg });
+});
+
+// 독립 투표 생성 API
+app.post('/api/polls', auth, (req, res) => {
+  const { question, options } = req.body;
+  if (!question || !options || options.length < 2) return res.status(400).json({ error: '질문과 2개 이상의 선택지가 필요합니다.' });
+
+  const result = db.prepare('INSERT INTO polls (room_id, creator_id, question, type) VALUES (?, ?, ?, ?)').run(
+    0, req.user.id, question, 'general'
+  );
+  for (const opt of options) {
+    db.prepare('INSERT INTO poll_options (poll_id, option_text) VALUES (?, ?)').run(result.lastInsertRowid, opt);
+  }
+  res.json({ message: '투표가 생성되었습니다.', pollId: result.lastInsertRowid });
 });
 
 // 파일 업로드

@@ -757,6 +757,24 @@ const App = {
       data.messages.forEach(msg => this.appendChatMessage(msg, false));
       container.scrollTop = container.scrollHeight;
     } catch (e) {}
+
+    if (this._chatPoll) clearInterval(this._chatPoll);
+    if (!this.socket || !this.socket.connected) {
+      this._chatPoll = setInterval(async () => {
+        if (this.currentPage !== 'chat' || !this.currentChatRoom) { clearInterval(this._chatPoll); return; }
+        try {
+          const d = await this.api(`/api/rooms/${roomId}/messages`);
+          const container = document.getElementById('chat-messages');
+          if (!container) { clearInterval(this._chatPoll); return; }
+          const existing = container.querySelectorAll('.chat-msg').length;
+          if (d.messages.length > existing) {
+            container.innerHTML = '';
+            d.messages.forEach(msg => this.appendChatMessage(msg, false));
+            container.scrollTop = container.scrollHeight;
+          }
+        } catch (e) {}
+      }, 3000);
+    }
   },
 
   appendChatMessage(msg, scroll = true) {
@@ -782,12 +800,19 @@ const App = {
     if (scroll) container.scrollTop = container.scrollHeight;
   },
 
-  sendChatMessage() {
+  async sendChatMessage() {
     const input = document.getElementById('chat-input');
     const content = input.value.trim();
     if (!content || !this.currentChatRoom) return;
-    this.socket.emit('chatMessage', { roomId: this.currentChatRoom, content });
     input.value = '';
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('chatMessage', { roomId: this.currentChatRoom, content });
+    } else {
+      try {
+        const data = await this.api(`/api/rooms/${this.currentChatRoom}/messages`, { method: 'POST', body: { content } });
+        this.appendChatMessage(data.message);
+      } catch (e) { this.showToast(e.message, 'error'); }
+    }
   },
 
   uploadChatImage() { document.getElementById('chat-file').click(); },
@@ -891,12 +916,19 @@ const App = {
     if (scroll) container.scrollTop = container.scrollHeight;
   },
 
-  sendDMMessage() {
+  async sendDMMessage() {
     const input = document.getElementById('dm-input');
     const content = input.value.trim();
     if (!content || !this.currentDMRoom) return;
-    this.socket.emit('dmMessage', { roomId: this.currentDMRoom, content });
     input.value = '';
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('dmMessage', { roomId: this.currentDMRoom, content });
+    } else {
+      try {
+        const data = await this.api(`/api/dm/${this.currentDMRoom}/messages`, { method: 'POST', body: { content } });
+        this.appendDMMessage(data.message);
+      } catch (e) { this.showToast(e.message, 'error'); }
+    }
   },
 
   async startDM(targetId) {
@@ -2006,7 +2038,7 @@ const App = {
 
   async equipTitle(title, equip) {
     try {
-      await this.api('/api/titles/equip', { method: 'POST', body: JSON.stringify({ title, equip: !!equip }), headers: { 'Content-Type': 'application/json' } });
+      await this.api('/api/titles/equip', { method: 'POST', body: JSON.stringify({ title: equip ? title : '' }), headers: { 'Content-Type': 'application/json' } });
       this.showToast(equip ? '칭호를 장착했습니다!' : '칭호를 해제했습니다');
       this.renderTitles();
     } catch (e) { alert(e.message); }
@@ -2044,6 +2076,7 @@ const App = {
     const content = document.getElementById('page-content');
     content.innerHTML = `
       <div class="page-title"><i class="fas fa-poll page-title-icon" style="color:#1E90FF"></i> 투표</div>
+      <button class="btn btn-primary" onclick="App.showCreatePoll()" style="margin-bottom:16px;width:100%"><i class="fas fa-plus"></i> 투표 만들기</button>
       <div id="polls-list">로딩중...</div>
     `;
     try {
@@ -2083,6 +2116,42 @@ const App = {
     try {
       await this.api(`/api/polls/${pollId}/vote`, { method: 'POST', body: JSON.stringify({ option_id: optionId }), headers: { 'Content-Type': 'application/json' } });
       this.showToast('투표했습니다!');
+      this.renderPolls();
+    } catch (e) { alert(e.message); }
+  },
+
+  showCreatePoll() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal" style="max-width:500px">
+        <div class="modal-header"><h3>투표 만들기</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+        <div class="modal-body">
+          <input type="text" id="poll-question" class="input" placeholder="질문을 입력하세요" style="margin-bottom:12px">
+          <div id="poll-options-list">
+            <input type="text" class="input poll-opt" placeholder="선택지 1" style="margin-bottom:8px">
+            <input type="text" class="input poll-opt" placeholder="선택지 2" style="margin-bottom:8px">
+          </div>
+          <button class="btn btn-secondary" onclick="const d=document.createElement('input');d.type='text';d.className='input poll-opt';d.placeholder='선택지 '+(document.querySelectorAll('.poll-opt').length+1);d.style.marginBottom='8px';document.getElementById('poll-options-list').appendChild(d)" style="margin-bottom:8px;width:100%"><i class="fas fa-plus"></i> 선택지 추가</button>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="this.closest('.modal-overlay').remove()">취소</button>
+          <button class="btn btn-primary" onclick="App.submitPoll()">만들기</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  },
+
+  async submitPoll() {
+    const question = document.getElementById('poll-question').value.trim();
+    const options = [...document.querySelectorAll('.poll-opt')].map(i => i.value.trim()).filter(v => v);
+    if (!question) return alert('질문을 입력하세요');
+    if (options.length < 2) return alert('선택지를 2개 이상 입력하세요');
+    try {
+      await this.api('/api/polls', { method: 'POST', body: { question, options } });
+      document.querySelector('.modal-overlay')?.remove();
+      this.showToast('투표가 생성되었습니다!');
       this.renderPolls();
     } catch (e) { alert(e.message); }
   },
@@ -2261,6 +2330,37 @@ const App = {
     this.applyTheme(newTheme);
     try { await this.api('/api/users/theme', { method: 'PUT', body: { theme: newTheme } }); } catch (e) {}
     this.renderSettings();
+  },
+
+  showWallpaperPicker() {
+    const wallpapers = [
+      { name: '기본', value: '', color: 'var(--bg-primary)' },
+      { name: '하늘', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#667eea' },
+      { name: '노을', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: '#f5576c' },
+      { name: '바다', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: '#4facfe' },
+      { name: '숲', value: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', color: '#43e97b' },
+      { name: '밤', value: 'linear-gradient(135deg, #0c3547 0%, #2c5364 50%, #203a43 100%)', color: '#2c5364' },
+      { name: '벚꽃', value: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)', color: '#fbc2eb' },
+      { name: '골드', value: 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)', color: '#ffd200' },
+    ];
+    this.showModal('배경화면 설정', `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        ${wallpapers.map(w => `
+          <div style="text-align:center;cursor:pointer" onclick="App.setWallpaper('${w.value.replace(/'/g, "\\'")}')">
+            <div style="width:60px;height:60px;border-radius:12px;margin:0 auto 4px;${w.value ? 'background:' + w.value : 'background:var(--bg-primary);border:2px dashed var(--text-secondary)'}"></div>
+            <span style="font-size:12px">${w.name}</span>
+          </div>
+        `).join('')}
+      </div>
+    `);
+  },
+
+  setWallpaper(bg) {
+    try { localStorage.setItem('sudabang_wallpaper', bg); } catch(e) {}
+    document.getElementById('page-content').style.background = bg || '';
+    document.body.style.background = bg || '';
+    this.closeModal();
+    this.showToast('배경화면이 변경되었습니다!');
   },
 
   async showBlockList() {
@@ -3311,9 +3411,41 @@ const App = {
   },
 
   async studentCheckAttendance(groupId) {
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        <button class="page-back" onclick="App.navigate('student-dashboard')"><i class="fas fa-arrow-left"></i></button>
+        <div class="page-title" style="margin-bottom:0"><i class="fas fa-clipboard-check" style="color:#3B82F6"></i> 출결</div>
+      </div>
+      <div class="card" style="text-align:center;padding:20px;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="App.doStudentAttendance(${groupId})" style="font-size:16px;padding:12px 32px"><i class="fas fa-check"></i> 출석하기</button>
+      </div>
+      <div class="page-title" style="font-size:16px">내 출결 기록</div>
+      <div id="student-attendance-history">로딩중...</div>
+    `;
+    try {
+      const data = await this.api(`/api/student/attendance-history?groupId=${groupId}`);
+      const container = document.getElementById('student-attendance-history');
+      const statusLabels = { present: '출석', late: '지각', early_leave: '조퇴', absent: '결석' };
+      const statusColors = { present: '#4CAF50', late: '#FF9800', early_leave: '#2196F3', absent: '#F44336' };
+      if (data.records && data.records.length) {
+        container.innerHTML = data.records.map(r => `
+          <div class="card" style="padding:12px;display:flex;justify-content:space-between;align-items:center">
+            <span>${r.date}</span>
+            <span style="color:${statusColors[r.status] || '#999'};font-weight:bold">${statusLabels[r.status] || r.status}</span>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = '<div class="empty-state"><p>출결 기록이 없습니다</p></div>';
+      }
+    } catch (e) { document.getElementById('student-attendance-history').innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`; }
+  },
+
+  async doStudentAttendance(groupId) {
     try {
       await this.api('/api/student/attendance', { method: 'POST', body: { groupId } });
-      this.showToast('출결이 등록되었습니다!', 'success');
+      this.showToast('출석이 등록되었습니다!', 'success');
+      this.studentCheckAttendance(groupId);
     } catch (e) { this.showToast(e.message, 'error'); }
   },
 

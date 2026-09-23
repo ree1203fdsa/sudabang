@@ -229,9 +229,22 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> callback,
                                              FileChooserParams params) {
+                if (fileCallback != null) {
+                    fileCallback.onReceiveValue(null);
+                }
                 fileCallback = callback;
-                Intent intent = params.createIntent();
-                startActivityForResult(intent, 1001);
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("image/*");
+                if (params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) {
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                }
+                try {
+                    startActivityForResult(Intent.createChooser(intent, "파일 선택"), 1001);
+                } catch (Exception e) {
+                    fileCallback = null;
+                    return false;
+                }
                 return true;
             }
         });
@@ -286,8 +299,15 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == 1001 && fileCallback != null) {
             Uri[] results = null;
             if (resultCode == RESULT_OK && data != null) {
-                String dataString = data.getDataString();
-                if (dataString != null) results = new Uri[]{Uri.parse(dataString)};
+                if (data.getClipData() != null) {
+                    int count = data.getClipData().getItemCount();
+                    results = new Uri[count];
+                    for (int i = 0; i < count; i++) {
+                        results[i] = data.getClipData().getItemAt(i).getUri();
+                    }
+                } else if (data.getData() != null) {
+                    results = new Uri[]{data.getData()};
+                }
             }
             fileCallback.onReceiveValue(results);
             fileCallback = null;
