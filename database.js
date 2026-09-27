@@ -419,6 +419,8 @@ async function initDatabase() {
     owner_id INTEGER NOT NULL,
     max_members INTEGER DEFAULT 100,
     is_active INTEGER DEFAULT 1,
+    last_message TEXT DEFAULT '',
+    last_message_at DATETIME DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_id) REFERENCES users(id)
   )`);
@@ -900,6 +902,8 @@ async function initDatabase() {
 
   // 기존 DB 마이그레이션: brand 컬럼 추가
   try { db.exec("ALTER TABLE users ADD COLUMN brand TEXT DEFAULT ''"); } catch(e) {}
+  try { db.exec("ALTER TABLE chat_rooms ADD COLUMN last_message TEXT DEFAULT ''"); } catch(e) {}
+  try { db.exec("ALTER TABLE chat_rooms ADD COLUMN last_message_at DATETIME DEFAULT NULL"); } catch(e) {}
 
   const firebaseData = await loadFromFirebase();
   if (firebaseData) {
