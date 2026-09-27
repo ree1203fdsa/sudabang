@@ -1590,6 +1590,174 @@ app.delete('/api/admin/rooms/:id/members/:userId', adminAuth, (req, res) => {
   res.json({ message: '멤버를 강퇴했습니다.' });
 });
 
+// 관리자 - 상점 관리
+app.get('/api/admin/shop', adminAuth, (req, res) => {
+  const items = db.prepare('SELECT * FROM shop_items ORDER BY category, id').all();
+  res.json({ items });
+});
+app.post('/api/admin/shop', adminAuth, (req, res) => {
+  const { name, description, image, category, price } = req.body;
+  if (!name) return res.status(400).json({ error: '이름을 입력하세요.' });
+  db.prepare('INSERT INTO shop_items (name, description, image, category, price) VALUES (?, ?, ?, ?, ?)').run(name, description||'', image||'🎁', category||'badge', price||100);
+  res.json({ message: '추가되었습니다.' });
+});
+app.put('/api/admin/shop/:id', adminAuth, (req, res) => {
+  const { name, description, image, category, price } = req.body;
+  db.prepare('UPDATE shop_items SET name=?, description=?, image=?, category=?, price=? WHERE id=?').run(name, description, image, category, price, req.params.id);
+  res.json({ message: '수정되었습니다.' });
+});
+app.delete('/api/admin/shop/:id', adminAuth, (req, res) => {
+  db.prepare('DELETE FROM shop_items WHERE id=?').run(req.params.id);
+  res.json({ message: '삭제되었습니다.' });
+});
+
+// 관리자 - 이벤트 관리
+app.get('/api/admin/events', adminAuth, (req, res) => {
+  const events = db.prepare('SELECT * FROM admin_events ORDER BY created_at DESC').all();
+  res.json({ events });
+});
+app.post('/api/admin/events', adminAuth, (req, res) => {
+  const { title, description, event_type, start_date, end_date, reward_coins } = req.body;
+  if (!title || !start_date || !end_date) return res.status(400).json({ error: '필수 항목을 입력하세요.' });
+  db.prepare('INSERT INTO admin_events (title, description, event_type, start_date, end_date, reward_coins, created_by) VALUES (?,?,?,?,?,?,?)').run(
+    title, description||'', event_type||'other', start_date, end_date, reward_coins||0, req.user.id
+  );
+  res.json({ message: '이벤트가 생성되었습니다.' });
+});
+app.put('/api/admin/events/:id', adminAuth, (req, res) => {
+  const ev = db.prepare('SELECT * FROM admin_events WHERE id=?').get(req.params.id);
+  if (!ev) return res.status(404).json({ error: '이벤트를 찾을 수 없습니다.' });
+  const { title, description, event_type, start_date, end_date, reward_coins, is_active } = req.body;
+  db.prepare('UPDATE admin_events SET title=?, description=?, event_type=?, start_date=?, end_date=?, reward_coins=?, is_active=? WHERE id=?').run(
+    title||ev.title, description!==undefined?description:ev.description, event_type||ev.event_type,
+    start_date||ev.start_date, end_date||ev.end_date, reward_coins!==undefined?reward_coins:ev.reward_coins,
+    is_active!==undefined?is_active:ev.is_active, req.params.id
+  );
+  res.json({ message: '수정되었습니다.' });
+});
+app.delete('/api/admin/events/:id', adminAuth, (req, res) => {
+  db.prepare('DELETE FROM admin_events WHERE id=?').run(req.params.id);
+  res.json({ message: '삭제되었습니다.' });
+});
+
+// 관리자 - 예약 게시글
+app.get('/api/admin/scheduled-posts', adminAuth, (req, res) => {
+  const posts = db.prepare('SELECT * FROM scheduled_posts ORDER BY scheduled_at DESC').all();
+  res.json({ posts });
+});
+app.post('/api/admin/scheduled-posts', adminAuth, (req, res) => {
+  const { title, content, scheduled_at, is_notice } = req.body;
+  if (!title || !content || !scheduled_at) return res.status(400).json({ error: '필수 항목을 입력하세요.' });
+  db.prepare('INSERT INTO scheduled_posts (title, content, scheduled_at, is_notice, created_by) VALUES (?,?,?,?,?)').run(
+    title, content, scheduled_at.replace('T',' '), is_notice||0, req.user.id
+  );
+  res.json({ message: '예약되었습니다.' });
+});
+app.put('/api/admin/scheduled-posts/:id', adminAuth, (req, res) => {
+  const { title, content, scheduled_at, is_notice } = req.body;
+  db.prepare('UPDATE scheduled_posts SET title=?, content=?, scheduled_at=?, is_notice=? WHERE id=? AND status="pending"').run(
+    title, content, scheduled_at?.replace('T',' '), is_notice||0, req.params.id
+  );
+  res.json({ message: '수정되었습니다.' });
+});
+app.post('/api/admin/scheduled-posts/:id/publish', adminAuth, (req, res) => {
+  const post = db.prepare('SELECT * FROM scheduled_posts WHERE id=?').get(req.params.id);
+  if (!post) return res.status(404).json({ error: '예약글을 찾을 수 없습니다.' });
+  db.prepare('INSERT INTO posts (title, content, user_id, is_notice) VALUES (?,?,?,?)').run(
+    post.title, post.content, post.created_by, post.is_notice
+  );
+  db.prepare('UPDATE scheduled_posts SET status="published" WHERE id=?').run(req.params.id);
+  res.json({ message: '게시되었습니다.' });
+});
+app.delete('/api/admin/scheduled-posts/:id', adminAuth, (req, res) => {
+  db.prepare('UPDATE scheduled_posts SET status="cancelled" WHERE id=?').run(req.params.id);
+  res.json({ message: '취소되었습니다.' });
+});
+
+// 관리자 - 자동 제재
+app.get('/api/admin/sanctions', adminAuth, (req, res) => {
+  let settings = db.prepare('SELECT * FROM sanctions_settings WHERE id=1').get();
+  if (!settings) {
+    db.prepare('INSERT INTO sanctions_settings (id, chat_restrict_warnings, post_restrict_warnings, auto_ban_warnings, restrict_duration_hours) VALUES (1,3,5,10,24)').run();
+    settings = { id:1, chat_restrict_warnings:3, post_restrict_warnings:5, auto_ban_warnings:10, restrict_duration_hours:24 };
+  }
+  const warnings = db.prepare(`
+    SELECT sw.*, s.name as student_name, u.nickname
+    FROM student_warnings sw
+    LEFT JOIN students s ON sw.student_id = s.id
+    LEFT JOIN users u ON s.user_id = u.id
+    ORDER BY sw.created_at DESC LIMIT 50
+  `).all();
+  res.json({ settings, warnings });
+});
+app.put('/api/admin/sanctions', adminAuth, (req, res) => {
+  const { chat_restrict_warnings, post_restrict_warnings, auto_ban_warnings, restrict_duration_hours } = req.body;
+  const exists = db.prepare('SELECT id FROM sanctions_settings WHERE id=1').get();
+  if (exists) {
+    db.prepare('UPDATE sanctions_settings SET chat_restrict_warnings=?, post_restrict_warnings=?, auto_ban_warnings=?, restrict_duration_hours=? WHERE id=1').run(
+      chat_restrict_warnings, post_restrict_warnings, auto_ban_warnings, restrict_duration_hours
+    );
+  } else {
+    db.prepare('INSERT INTO sanctions_settings (id, chat_restrict_warnings, post_restrict_warnings, auto_ban_warnings, restrict_duration_hours) VALUES (1,?,?,?,?)').run(
+      chat_restrict_warnings, post_restrict_warnings, auto_ban_warnings, restrict_duration_hours
+    );
+  }
+  res.json({ message: '저장되었습니다.' });
+});
+
+// 관리자 - DM 모니터링
+app.get('/api/admin/dm-monitor', adminAuth, (req, res) => {
+  const rooms = db.prepare(`
+    SELECT dr.*, u1.nickname as user1_name, u2.nickname as user2_name,
+    (SELECT COUNT(*) FROM dm_messages WHERE room_id = dr.id) as message_count,
+    (SELECT content FROM dm_messages WHERE room_id = dr.id ORDER BY created_at DESC LIMIT 1) as last_message,
+    (SELECT COUNT(*) FROM reports WHERE target_type = 'dm' AND target_id = dr.id AND status = 'pending') > 0 as reported
+    FROM dm_rooms dr
+    JOIN users u1 ON dr.user1_id = u1.id
+    JOIN users u2 ON dr.user2_id = u2.id
+    ORDER BY (SELECT MAX(created_at) FROM dm_messages WHERE room_id = dr.id) DESC
+    LIMIT 50
+  `).all();
+  res.json({ rooms });
+});
+app.get('/api/admin/dm-monitor/:roomId', adminAuth, (req, res) => {
+  const messages = db.prepare(`
+    SELECT dm.*, u.nickname as sender_name
+    FROM dm_messages dm JOIN users u ON dm.sender_id = u.id
+    WHERE dm.room_id = ?
+    ORDER BY dm.created_at DESC LIMIT 100
+  `).all(req.params.roomId);
+  res.json({ messages: messages.reverse() });
+});
+
+// 관리자 - 팝업 공지
+app.get('/api/admin/popup-notices', adminAuth, (req, res) => {
+  const notices = db.prepare('SELECT * FROM popup_notices ORDER BY created_at DESC').all();
+  res.json({ notices });
+});
+app.post('/api/admin/popup-notices', adminAuth, (req, res) => {
+  const { title, content, button_text } = req.body;
+  if (!title || !content) return res.status(400).json({ error: '제목과 내용을 입력하세요.' });
+  db.prepare('INSERT INTO popup_notices (title, content, button_text, is_active, created_by) VALUES (?,?,?,1,?)').run(
+    title, content, button_text||'확인', req.user.id
+  );
+  res.json({ message: '추가되었습니다.' });
+});
+app.put('/api/admin/popup-notices/:id', adminAuth, (req, res) => {
+  const notice = db.prepare('SELECT * FROM popup_notices WHERE id=?').get(req.params.id);
+  if (!notice) return res.status(404).json({ error: '공지를 찾을 수 없습니다.' });
+  const { title, content, button_text, is_active } = req.body;
+  db.prepare('UPDATE popup_notices SET title=?, content=?, button_text=?, is_active=? WHERE id=?').run(
+    title||notice.title, content!==undefined?content:notice.content, button_text||notice.button_text||'확인',
+    is_active!==undefined?is_active:notice.is_active, req.params.id
+  );
+  res.json({ message: '수정되었습니다.' });
+});
+app.delete('/api/admin/popup-notices/:id', adminAuth, (req, res) => {
+  db.prepare('DELETE FROM popup_notices WHERE id=?').run(req.params.id);
+  res.json({ message: '삭제되었습니다.' });
+});
+
 // 관리자 - 신고 관리
 app.get('/api/admin/reports', adminAuth, (req, res) => {
   const reports = db.prepare(`
@@ -2904,8 +3072,20 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+function checkScheduledPosts() {
+  if (!db) return;
+  const now = new Date().toISOString().replace('T',' ').substring(0, 19);
+  const posts = db.prepare('SELECT * FROM scheduled_posts WHERE status = "pending" AND scheduled_at <= ?').all(now);
+  for (const post of posts) {
+    db.prepare('INSERT INTO posts (title, content, user_id, is_notice) VALUES (?,?,?,?)').run(post.title, post.content, post.created_by, post.is_notice);
+    db.prepare('UPDATE scheduled_posts SET status = "published" WHERE id = ?').run(post.id);
+    console.log(`[예약게시] "${post.title}" 자동 게시 완료`);
+  }
+}
+
 async function startServer() {
   db = await initDatabase();
+  setInterval(checkScheduledPosts, 60000);
   server.listen(PORT, () => {
     console.log(`수다방 서버가 http://localhost:${PORT} 에서 실행 중입니다.`);
   });

@@ -21,7 +21,7 @@ const ALL_TABLES = [
   'level_rewards', 'user_titles', 'report_auto_actions', 'release_notes',
   'popup_notices', 'events', 'class_votes', 'class_vote_options', 'class_vote_responses',
   'typing_records', 'seat_assignments', 'stickers', 'user_stickers',
-  'school_schedules'
+  'school_schedules', 'scheduled_posts', 'sanctions_settings', 'admin_events'
 ];
 
 class BetterSqlite3Compat {
@@ -292,6 +292,38 @@ async function initDatabase() {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (group_id) REFERENCES school_groups(id),
     FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS scheduled_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    scheduled_at TEXT NOT NULL,
+    is_notice INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'pending',
+    created_by INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS sanctions_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_restrict_warnings INTEGER DEFAULT 3,
+    post_restrict_warnings INTEGER DEFAULT 5,
+    auto_ban_warnings INTEGER DEFAULT 10,
+    restrict_duration_hours INTEGER DEFAULT 24
+  )`);
+
+  db.exec(`CREATE TABLE IF NOT EXISTS admin_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    event_type TEXT DEFAULT 'other',
+    start_date TEXT NOT NULL,
+    end_date TEXT NOT NULL,
+    reward_coins INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_by INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
   db.exec(`CREATE TABLE IF NOT EXISTS school_announcements (
@@ -906,6 +938,12 @@ async function initDatabase() {
   try { db.exec("ALTER TABLE chat_rooms ADD COLUMN last_message TEXT DEFAULT ''"); } catch(e) {}
   try { db.exec("ALTER TABLE chat_rooms ADD COLUMN last_message_at DATETIME DEFAULT NULL"); } catch(e) {}
   try { db.exec("ALTER TABLE chat_rooms ADD COLUMN plain_password TEXT DEFAULT ''"); } catch(e) {}
+  try { db.exec("ALTER TABLE popup_notices ADD COLUMN button_text TEXT DEFAULT '확인'"); } catch(e) {}
+  try { db.exec("ALTER TABLE events ADD COLUMN event_type TEXT DEFAULT 'other'"); } catch(e) {}
+  try { db.exec("ALTER TABLE events ADD COLUMN start_date TEXT DEFAULT ''"); } catch(e) {}
+  try { db.exec("ALTER TABLE events ADD COLUMN end_date TEXT DEFAULT ''"); } catch(e) {}
+  try { db.exec("ALTER TABLE events ADD COLUMN reward_coins INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE events ADD COLUMN is_active INTEGER DEFAULT 1"); } catch(e) {}
 
   const firebaseData = await loadFromFirebase();
   if (firebaseData) {

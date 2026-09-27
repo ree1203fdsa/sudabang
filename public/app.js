@@ -3377,6 +3377,12 @@ const App = {
         <div class="tab" onclick="App.loadAdminTab('rooms', this)">수다방</div>
         <div class="tab" onclick="App.loadAdminTab('reports', this)">신고</div>
         <div class="tab" onclick="App.loadAdminTab('notices', this)">공지</div>
+        <div class="tab" onclick="App.loadAdminTab('shop', this)">상점</div>
+        <div class="tab" onclick="App.loadAdminTab('events', this)">이벤트</div>
+        <div class="tab" onclick="App.loadAdminTab('scheduled', this)">예약글</div>
+        <div class="tab" onclick="App.loadAdminTab('sanctions', this)">자동제재</div>
+        <div class="tab" onclick="App.loadAdminTab('dm', this)">DM</div>
+        <div class="tab" onclick="App.loadAdminTab('popup', this)">팝업공지</div>
         <div class="tab" onclick="App.loadAdminTab('referrals', this)">추천코드</div>
         <div class="tab" onclick="App.loadAdminTab('coupons', this)">쿠폰</div>
         <div class="tab" onclick="App.loadAdminTab('banners', this)">배너</div>
@@ -3594,6 +3600,152 @@ const App = {
               <td>${this.escapeHtml(l.detail)}</td>
             </tr>`).join('')}</tbody>
           </table></div>`;
+      } catch (e) {}
+    } else if (tab === 'shop') {
+      try {
+        const data = await this.api('/api/admin/shop');
+        container.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-size:13px;color:var(--text-secondary)">총 ${data.items.length}개 아이템</span>
+            <button class="btn btn-small btn-primary" onclick="App.adminAddShopItem()"><i class="fas fa-plus"></i> 추가</button>
+          </div>
+          <div style="overflow-x:auto"><table class="admin-table">
+            <thead><tr><th>아이콘</th><th>이름</th><th>카테고리</th><th>가격</th><th>작업</th></tr></thead>
+            <tbody>${data.items.map(i => `<tr>
+              <td>${i.image}</td>
+              <td>${this.escapeHtml(i.name)}</td>
+              <td>${i.category}</td>
+              <td>${i.price}</td>
+              <td style="display:flex;gap:4px">
+                <button class="btn btn-small btn-secondary" onclick="App.adminEditShopItem(${i.id})"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-small btn-danger" onclick="App.adminDeleteShopItem(${i.id})"><i class="fas fa-trash"></i></button>
+              </td>
+            </tr>`).join('')}</tbody>
+          </table></div>`;
+      } catch (e) {}
+    } else if (tab === 'events') {
+      try {
+        const data = await this.api('/api/admin/events');
+        container.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-size:13px;color:var(--text-secondary)">이벤트 관리</span>
+            <button class="btn btn-small btn-primary" onclick="App.adminAddEvent()"><i class="fas fa-plus"></i> 추가</button>
+          </div>
+          ${data.events.map(e => `
+            <div class="card" style="margin-bottom:10px;border-left:4px solid ${e.is_active ? 'var(--success)' : 'var(--text-muted)'}">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div><strong>${this.escapeHtml(e.title)}</strong> ${e.is_active ? '<span class="badge badge-user">진행중</span>' : '<span class="badge badge-banned">종료</span>'}</div>
+                <span style="font-size:12px;color:var(--text-muted)">${e.start_date} ~ ${e.end_date}</span>
+              </div>
+              <p style="font-size:13px;color:var(--text-secondary);margin:6px 0">${this.escapeHtml(e.description || '')}</p>
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">보상: ${e.reward_coins}코인 · 타입: ${e.event_type}</div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-small btn-secondary" onclick="App.adminEditEvent(${e.id})"><i class="fas fa-edit"></i> 수정</button>
+                ${e.is_active ? `<button class="btn btn-small btn-danger" onclick="App.adminToggleEvent(${e.id},0)"><i class="fas fa-stop"></i> 종료</button>` : `<button class="btn btn-small btn-primary" onclick="App.adminToggleEvent(${e.id},1)"><i class="fas fa-play"></i> 시작</button>`}
+                <button class="btn btn-small btn-danger" onclick="App.adminDeleteEvent(${e.id})"><i class="fas fa-trash"></i> 삭제</button>
+              </div>
+            </div>
+          `).join('')}
+          ${data.events.length === 0 ? '<div class="empty-state"><i class="fas fa-calendar-alt"></i><p>이벤트가 없습니다.</p></div>' : ''}
+        `;
+      } catch (e) {}
+    } else if (tab === 'scheduled') {
+      try {
+        const data = await this.api('/api/admin/scheduled-posts');
+        container.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-size:13px;color:var(--text-secondary)">예약 게시글</span>
+            <button class="btn btn-small btn-primary" onclick="App.adminAddScheduledPost()"><i class="fas fa-plus"></i> 추가</button>
+          </div>
+          ${data.posts.map(p => `
+            <div class="card" style="margin-bottom:10px;border-left:4px solid ${p.status==='pending'?'var(--warning)':p.status==='published'?'var(--success)':'var(--text-muted)'}">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <strong>${this.escapeHtml(p.title)}</strong>
+                <span class="badge badge-${p.status==='pending'?'admin':p.status==='published'?'user':'banned'}">${p.status==='pending'?'대기':p.status==='published'?'게시완료':'취소'}</span>
+              </div>
+              <p style="font-size:13px;color:var(--text-secondary);margin:6px 0;max-height:60px;overflow:hidden">${this.escapeHtml(p.content?.substring(0,100) || '')}</p>
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px"><i class="fas fa-clock"></i> 예약: ${p.scheduled_at} ${p.is_notice ? '· <i class="fas fa-bullhorn"></i> 공지' : ''}</div>
+              ${p.status === 'pending' ? `<div style="display:flex;gap:6px">
+                <button class="btn btn-small btn-secondary" onclick="App.adminEditScheduledPost(${p.id})"><i class="fas fa-edit"></i> 수정</button>
+                <button class="btn btn-small btn-primary" onclick="App.adminPublishNow(${p.id})"><i class="fas fa-paper-plane"></i> 지금 게시</button>
+                <button class="btn btn-small btn-danger" onclick="App.adminCancelScheduledPost(${p.id})"><i class="fas fa-times"></i> 취소</button>
+              </div>` : ''}
+            </div>
+          `).join('')}
+          ${data.posts.length === 0 ? '<div class="empty-state"><i class="fas fa-clock"></i><p>예약 게시글이 없습니다.</p></div>' : ''}
+        `;
+      } catch (e) {}
+    } else if (tab === 'sanctions') {
+      try {
+        const data = await this.api('/api/admin/sanctions');
+        const s = data.settings;
+        container.innerHTML = `
+          <div class="card" style="margin-bottom:16px">
+            <h3 style="margin-bottom:12px"><i class="fas fa-gavel"></i> 자동 제재 설정</h3>
+            <div class="form-group"><label class="form-label">채팅 제한 (경고 N회)</label><input type="number" class="form-input" id="sanction-chat" value="${s.chat_restrict_warnings}" min="1" max="20"></div>
+            <div class="form-group"><label class="form-label">게시글 제한 (경고 N회)</label><input type="number" class="form-input" id="sanction-post" value="${s.post_restrict_warnings}" min="1" max="20"></div>
+            <div class="form-group"><label class="form-label">자동 밴 (경고 N회)</label><input type="number" class="form-input" id="sanction-ban" value="${s.auto_ban_warnings}" min="1" max="50"></div>
+            <div class="form-group"><label class="form-label">제재 기간 (시간)</label><input type="number" class="form-input" id="sanction-duration" value="${s.restrict_duration_hours}" min="1" max="720"></div>
+            <button class="btn btn-primary" onclick="App.adminSaveSanctions()">저장</button>
+          </div>
+          <h3 style="margin-bottom:12px"><i class="fas fa-exclamation-triangle"></i> 최근 경고 내역</h3>
+          ${data.warnings.map(w => `
+            <div class="card" style="margin-bottom:8px;padding:10px 14px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div><strong>${this.escapeHtml(w.student_name || w.nickname || 'ID:'+w.user_id)}</strong> · 경고 ${w.warning_count}회</div>
+                <span style="font-size:12px;color:var(--text-muted)">${this.formatTime(w.created_at)}</span>
+              </div>
+              <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">${this.escapeHtml(w.reason || '')}</div>
+            </div>
+          `).join('')}
+          ${data.warnings.length === 0 ? '<p style="color:var(--text-muted);text-align:center">경고 내역이 없습니다.</p>' : ''}
+        `;
+      } catch (e) {}
+    } else if (tab === 'dm') {
+      try {
+        const data = await this.api('/api/admin/dm-monitor');
+        container.innerHTML = `
+          <div style="margin-bottom:12px;font-size:13px;color:var(--text-secondary)">최근 DM 대화 (신고 포함)</div>
+          ${data.rooms.map(r => `
+            <div class="card" style="margin-bottom:10px;cursor:pointer" onclick="App.adminViewDM(${r.id})">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <i class="fas fa-envelope" style="color:var(--primary)"></i>
+                  <strong>${this.escapeHtml(r.user1_name)}</strong> <i class="fas fa-arrows-alt-h" style="font-size:12px;color:var(--text-muted)"></i> <strong>${this.escapeHtml(r.user2_name)}</strong>
+                  ${r.reported ? '<span class="badge badge-banned" style="font-size:10px">신고</span>' : ''}
+                </div>
+                <span style="font-size:12px;color:var(--text-muted)">${r.message_count}개</span>
+              </div>
+              <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">${r.last_message ? this.escapeHtml(r.last_message.substring(0,50)) : ''}</div>
+            </div>
+          `).join('')}
+          ${data.rooms.length === 0 ? '<div class="empty-state"><i class="fas fa-envelope"></i><p>DM 기록이 없습니다.</p></div>' : ''}
+        `;
+      } catch (e) {}
+    } else if (tab === 'popup') {
+      try {
+        const data = await this.api('/api/admin/popup-notices');
+        container.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-size:13px;color:var(--text-secondary)">팝업 공지</span>
+            <button class="btn btn-small btn-primary" onclick="App.adminAddPopup()"><i class="fas fa-plus"></i> 추가</button>
+          </div>
+          ${data.notices.map(n => `
+            <div class="card" style="margin-bottom:10px;border-left:4px solid ${n.is_active ? 'var(--warning)' : 'var(--text-muted)'}">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <strong>${this.escapeHtml(n.title)}</strong>
+                ${n.is_active ? '<span class="badge badge-admin">활성</span>' : '<span class="badge badge-banned">비활성</span>'}
+              </div>
+              <p style="font-size:13px;color:var(--text-secondary);margin:6px 0">${this.escapeHtml(n.content?.substring(0,100) || '')}</p>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-small btn-secondary" onclick="App.adminEditPopup(${n.id})"><i class="fas fa-edit"></i> 수정</button>
+                ${n.is_active ? `<button class="btn btn-small btn-danger" onclick="App.adminTogglePopup(${n.id},0)">비활성</button>` : `<button class="btn btn-small btn-primary" onclick="App.adminTogglePopup(${n.id},1)">활성</button>`}
+                <button class="btn btn-small btn-danger" onclick="App.adminDeletePopup(${n.id})"><i class="fas fa-trash"></i></button>
+              </div>
+            </div>
+          `).join('')}
+          ${data.notices.length === 0 ? '<div class="empty-state"><i class="fas fa-bell"></i><p>팝업 공지가 없습니다.</p></div>' : ''}
+        `;
       } catch (e) {}
     }
   },
@@ -3833,6 +3985,290 @@ const App = {
       this.showToast('강퇴되었습니다.', 'success');
       this.closeModal();
       this.adminRoomMembers(roomId, roomName);
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  // ===== 상점 관리 =====
+  adminAddShopItem() {
+    this.showModal('아이템 추가', `
+      <div class="form-group"><label class="form-label">이름</label><input type="text" class="form-input" id="shop-name"></div>
+      <div class="form-group"><label class="form-label">설명</label><input type="text" class="form-input" id="shop-desc"></div>
+      <div class="form-group"><label class="form-label">아이콘/이모지</label><input type="text" class="form-input" id="shop-image" value="🎁"></div>
+      <div class="form-group"><label class="form-label">카테고리</label>
+        <select class="form-select" id="shop-category"><option value="frame">프레임</option><option value="background">배경</option><option value="nickname">닉네임</option><option value="badge">뱃지</option><option value="sticker">스티커</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">가격</label><input type="number" class="form-input" id="shop-price" value="100" min="0"></div>
+    `, async () => {
+      try {
+        await this.api('/api/admin/shop', { method: 'POST', body: {
+          name: document.getElementById('shop-name').value,
+          description: document.getElementById('shop-desc').value,
+          image: document.getElementById('shop-image').value,
+          category: document.getElementById('shop-category').value,
+          price: parseInt(document.getElementById('shop-price').value)
+        }});
+        this.closeModal(); this.showToast('추가되었습니다.', 'success');
+        this.loadAdminTab('shop', document.querySelector('.tab.active'));
+      } catch (e) { this.showToast(e.message, 'error'); }
+    });
+  },
+  async adminEditShopItem(id) {
+    try {
+      const data = await this.api('/api/admin/shop');
+      const item = data.items.find(i => i.id === id);
+      if (!item) return;
+      this.showModal('아이템 수정', `
+        <div class="form-group"><label class="form-label">이름</label><input type="text" class="form-input" id="shop-name" value="${this.escapeHtml(item.name)}"></div>
+        <div class="form-group"><label class="form-label">설명</label><input type="text" class="form-input" id="shop-desc" value="${this.escapeHtml(item.description)}"></div>
+        <div class="form-group"><label class="form-label">아이콘/이모지</label><input type="text" class="form-input" id="shop-image" value="${this.escapeHtml(item.image)}"></div>
+        <div class="form-group"><label class="form-label">카테고리</label>
+          <select class="form-select" id="shop-category">${['frame','background','nickname','badge','sticker'].map(c => `<option value="${c}" ${item.category===c?'selected':''}>${c}</option>`).join('')}</select>
+        </div>
+        <div class="form-group"><label class="form-label">가격</label><input type="number" class="form-input" id="shop-price" value="${item.price}" min="0"></div>
+      `, async () => {
+        try {
+          await this.api(`/api/admin/shop/${id}`, { method: 'PUT', body: {
+            name: document.getElementById('shop-name').value,
+            description: document.getElementById('shop-desc').value,
+            image: document.getElementById('shop-image').value,
+            category: document.getElementById('shop-category').value,
+            price: parseInt(document.getElementById('shop-price').value)
+          }});
+          this.closeModal(); this.showToast('수정되었습니다.', 'success');
+          this.loadAdminTab('shop', document.querySelector('.tab.active'));
+        } catch (e) { this.showToast(e.message, 'error'); }
+      });
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+  async adminDeleteShopItem(id) {
+    if (!confirm('아이템을 삭제하시겠습니까?')) return;
+    try {
+      await this.api(`/api/admin/shop/${id}`, { method: 'DELETE' });
+      this.showToast('삭제되었습니다.', 'success');
+      this.loadAdminTab('shop', document.querySelector('.tab.active'));
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  // ===== 이벤트 관리 =====
+  adminAddEvent() {
+    const today = new Date().toISOString().split('T')[0];
+    this.showModal('이벤트 추가', `
+      <div class="form-group"><label class="form-label">제목</label><input type="text" class="form-input" id="event-title"></div>
+      <div class="form-group"><label class="form-label">설명</label><textarea class="form-input" id="event-desc" rows="3"></textarea></div>
+      <div class="form-group"><label class="form-label">타입</label>
+        <select class="form-select" id="event-type"><option value="attendance">출석</option><option value="roulette">룰렛</option><option value="quiz">퀴즈</option><option value="mission">미션</option><option value="other">기타</option></select>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div class="form-group" style="flex:1"><label class="form-label">시작일</label><input type="date" class="form-input" id="event-start" value="${today}"></div>
+        <div class="form-group" style="flex:1"><label class="form-label">종료일</label><input type="date" class="form-input" id="event-end"></div>
+      </div>
+      <div class="form-group"><label class="form-label">보상 코인</label><input type="number" class="form-input" id="event-coins" value="50" min="0"></div>
+    `, async () => {
+      try {
+        await this.api('/api/admin/events', { method: 'POST', body: {
+          title: document.getElementById('event-title').value,
+          description: document.getElementById('event-desc').value,
+          event_type: document.getElementById('event-type').value,
+          start_date: document.getElementById('event-start').value,
+          end_date: document.getElementById('event-end').value,
+          reward_coins: parseInt(document.getElementById('event-coins').value)
+        }});
+        this.closeModal(); this.showToast('이벤트가 생성되었습니다.', 'success');
+        this.loadAdminTab('events', document.querySelector('.tab.active'));
+      } catch (e) { this.showToast(e.message, 'error'); }
+    });
+  },
+  async adminEditEvent(id) {
+    try {
+      const data = await this.api('/api/admin/events');
+      const ev = data.events.find(e => e.id === id);
+      if (!ev) return;
+      this.showModal('이벤트 수정', `
+        <div class="form-group"><label class="form-label">제목</label><input type="text" class="form-input" id="event-title" value="${this.escapeHtml(ev.title)}"></div>
+        <div class="form-group"><label class="form-label">설명</label><textarea class="form-input" id="event-desc" rows="3">${this.escapeHtml(ev.description||'')}</textarea></div>
+        <div class="form-group"><label class="form-label">타입</label>
+          <select class="form-select" id="event-type">${['attendance','roulette','quiz','mission','other'].map(t => `<option value="${t}" ${ev.event_type===t?'selected':''}>${t}</option>`).join('')}</select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div class="form-group" style="flex:1"><label class="form-label">시작일</label><input type="date" class="form-input" id="event-start" value="${ev.start_date}"></div>
+          <div class="form-group" style="flex:1"><label class="form-label">종료일</label><input type="date" class="form-input" id="event-end" value="${ev.end_date}"></div>
+        </div>
+        <div class="form-group"><label class="form-label">보상 코인</label><input type="number" class="form-input" id="event-coins" value="${ev.reward_coins}" min="0"></div>
+      `, async () => {
+        try {
+          await this.api(`/api/admin/events/${id}`, { method: 'PUT', body: {
+            title: document.getElementById('event-title').value, description: document.getElementById('event-desc').value,
+            event_type: document.getElementById('event-type').value, start_date: document.getElementById('event-start').value,
+            end_date: document.getElementById('event-end').value, reward_coins: parseInt(document.getElementById('event-coins').value)
+          }});
+          this.closeModal(); this.showToast('수정되었습니다.', 'success');
+          this.loadAdminTab('events', document.querySelector('.tab.active'));
+        } catch (e) { this.showToast(e.message, 'error'); }
+      });
+    } catch (e) {}
+  },
+  async adminToggleEvent(id, active) {
+    try {
+      await this.api(`/api/admin/events/${id}`, { method: 'PUT', body: { is_active: active } });
+      this.showToast(active ? '이벤트 시작!' : '이벤트 종료', 'success');
+      this.loadAdminTab('events', document.querySelector('.tab.active'));
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+  async adminDeleteEvent(id) {
+    if (!confirm('이벤트를 삭제하시겠습니까?')) return;
+    try {
+      await this.api(`/api/admin/events/${id}`, { method: 'DELETE' });
+      this.showToast('삭제되었습니다.', 'success');
+      this.loadAdminTab('events', document.querySelector('.tab.active'));
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  // ===== 예약 게시글 =====
+  adminAddScheduledPost() {
+    this.showModal('예약 게시글', `
+      <div class="form-group"><label class="form-label">제목</label><input type="text" class="form-input" id="sched-title"></div>
+      <div class="form-group"><label class="form-label">내용</label><textarea class="form-input" id="sched-content" rows="5"></textarea></div>
+      <div class="form-group"><label class="form-label">게시 날짜/시간</label><input type="datetime-local" class="form-input" id="sched-at"></div>
+      <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="sched-notice"> 공지로 게시</label></div>
+    `, async () => {
+      try {
+        await this.api('/api/admin/scheduled-posts', { method: 'POST', body: {
+          title: document.getElementById('sched-title').value,
+          content: document.getElementById('sched-content').value,
+          scheduled_at: document.getElementById('sched-at').value,
+          is_notice: document.getElementById('sched-notice').checked ? 1 : 0
+        }});
+        this.closeModal(); this.showToast('예약되었습니다.', 'success');
+        this.loadAdminTab('scheduled', document.querySelector('.tab.active'));
+      } catch (e) { this.showToast(e.message, 'error'); }
+    });
+  },
+  async adminEditScheduledPost(id) {
+    try {
+      const data = await this.api('/api/admin/scheduled-posts');
+      const p = data.posts.find(x => x.id === id);
+      if (!p) return;
+      this.showModal('예약글 수정', `
+        <div class="form-group"><label class="form-label">제목</label><input type="text" class="form-input" id="sched-title" value="${this.escapeHtml(p.title)}"></div>
+        <div class="form-group"><label class="form-label">내용</label><textarea class="form-input" id="sched-content" rows="5">${this.escapeHtml(p.content||'')}</textarea></div>
+        <div class="form-group"><label class="form-label">게시 날짜/시간</label><input type="datetime-local" class="form-input" id="sched-at" value="${p.scheduled_at?.replace(' ','T')}"></div>
+        <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="sched-notice" ${p.is_notice?'checked':''}> 공지로 게시</label></div>
+      `, async () => {
+        try {
+          await this.api(`/api/admin/scheduled-posts/${id}`, { method: 'PUT', body: {
+            title: document.getElementById('sched-title').value, content: document.getElementById('sched-content').value,
+            scheduled_at: document.getElementById('sched-at').value, is_notice: document.getElementById('sched-notice').checked ? 1 : 0
+          }});
+          this.closeModal(); this.showToast('수정되었습니다.', 'success');
+          this.loadAdminTab('scheduled', document.querySelector('.tab.active'));
+        } catch (e) { this.showToast(e.message, 'error'); }
+      });
+    } catch (e) {}
+  },
+  async adminPublishNow(id) {
+    if (!confirm('지금 바로 게시하시겠습니까?')) return;
+    try {
+      await this.api(`/api/admin/scheduled-posts/${id}/publish`, { method: 'POST' });
+      this.showToast('게시되었습니다.', 'success');
+      this.loadAdminTab('scheduled', document.querySelector('.tab.active'));
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+  async adminCancelScheduledPost(id) {
+    if (!confirm('예약을 취소하시겠습니까?')) return;
+    try {
+      await this.api(`/api/admin/scheduled-posts/${id}`, { method: 'DELETE' });
+      this.showToast('취소되었습니다.', 'success');
+      this.loadAdminTab('scheduled', document.querySelector('.tab.active'));
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  // ===== 자동 제재 =====
+  async adminSaveSanctions() {
+    try {
+      await this.api('/api/admin/sanctions', { method: 'PUT', body: {
+        chat_restrict_warnings: parseInt(document.getElementById('sanction-chat').value),
+        post_restrict_warnings: parseInt(document.getElementById('sanction-post').value),
+        auto_ban_warnings: parseInt(document.getElementById('sanction-ban').value),
+        restrict_duration_hours: parseInt(document.getElementById('sanction-duration').value)
+      }});
+      this.showToast('저장되었습니다.', 'success');
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  // ===== DM 모니터링 =====
+  async adminViewDM(roomId) {
+    try {
+      const data = await this.api(`/api/admin/dm-monitor/${roomId}`);
+      this.showModal(`DM 대화 내역`, `
+        <div style="max-height:400px;overflow-y:auto">
+          ${data.messages.map(m => `
+            <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+              <div style="display:flex;justify-content:space-between">
+                <strong style="font-size:13px">${this.escapeHtml(m.sender_name)}</strong>
+                <span style="font-size:11px;color:var(--text-muted)">${this.formatTime(m.created_at)}</span>
+              </div>
+              <p style="font-size:14px;margin:4px 0 0">${this.escapeHtml(m.content)}</p>
+            </div>
+          `).join('')}
+          ${data.messages.length === 0 ? '<p style="text-align:center;color:var(--text-muted)">메시지가 없습니다.</p>' : ''}
+        </div>
+      `, null);
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  // ===== 팝업 공지 =====
+  adminAddPopup() {
+    this.showModal('팝업 공지 추가', `
+      <div class="form-group"><label class="form-label">제목</label><input type="text" class="form-input" id="popup-title"></div>
+      <div class="form-group"><label class="form-label">내용</label><textarea class="form-input" id="popup-content" rows="4"></textarea></div>
+      <div class="form-group"><label class="form-label">버튼 텍스트</label><input type="text" class="form-input" id="popup-btn" value="확인" placeholder="확인"></div>
+    `, async () => {
+      try {
+        await this.api('/api/admin/popup-notices', { method: 'POST', body: {
+          title: document.getElementById('popup-title').value,
+          content: document.getElementById('popup-content').value,
+          button_text: document.getElementById('popup-btn').value
+        }});
+        this.closeModal(); this.showToast('추가되었습니다.', 'success');
+        this.loadAdminTab('popup', document.querySelector('.tab.active'));
+      } catch (e) { this.showToast(e.message, 'error'); }
+    });
+  },
+  async adminEditPopup(id) {
+    try {
+      const data = await this.api('/api/admin/popup-notices');
+      const n = data.notices.find(x => x.id === id);
+      if (!n) return;
+      this.showModal('팝업 공지 수정', `
+        <div class="form-group"><label class="form-label">제목</label><input type="text" class="form-input" id="popup-title" value="${this.escapeHtml(n.title)}"></div>
+        <div class="form-group"><label class="form-label">내용</label><textarea class="form-input" id="popup-content" rows="4">${this.escapeHtml(n.content||'')}</textarea></div>
+        <div class="form-group"><label class="form-label">버튼 텍스트</label><input type="text" class="form-input" id="popup-btn" value="${this.escapeHtml(n.button_text||'확인')}"></div>
+      `, async () => {
+        try {
+          await this.api(`/api/admin/popup-notices/${id}`, { method: 'PUT', body: {
+            title: document.getElementById('popup-title').value,
+            content: document.getElementById('popup-content').value,
+            button_text: document.getElementById('popup-btn').value
+          }});
+          this.closeModal(); this.showToast('수정되었습니다.', 'success');
+          this.loadAdminTab('popup', document.querySelector('.tab.active'));
+        } catch (e) { this.showToast(e.message, 'error'); }
+      });
+    } catch (e) {}
+  },
+  async adminTogglePopup(id, active) {
+    try {
+      await this.api(`/api/admin/popup-notices/${id}`, { method: 'PUT', body: { is_active: active } });
+      this.showToast(active ? '활성화됨' : '비활성화됨', 'success');
+      this.loadAdminTab('popup', document.querySelector('.tab.active'));
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+  async adminDeletePopup(id) {
+    if (!confirm('삭제하시겠습니까?')) return;
+    try {
+      await this.api(`/api/admin/popup-notices/${id}`, { method: 'DELETE' });
+      this.showToast('삭제되었습니다.', 'success');
+      this.loadAdminTab('popup', document.querySelector('.tab.active'));
     } catch (e) { this.showToast(e.message, 'error'); }
   },
 
