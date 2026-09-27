@@ -908,6 +908,15 @@ app.post('/api/rooms', auth, levelCheck(19), (req, res) => {
   );
   db.prepare('INSERT INTO chat_room_members (room_id, user_id, role) VALUES (?, ?, ?)').run(result.lastInsertRowid, req.user.id, 'owner');
 
+  if (type === 'limited' && req.body.invitedUsers && Array.isArray(req.body.invitedUsers)) {
+    for (const uid of req.body.invitedUsers) {
+      const exists = db.prepare('SELECT id FROM users WHERE id = ?').get(uid);
+      if (exists) {
+        db.prepare('INSERT OR IGNORE INTO chat_room_members (room_id, user_id, role) VALUES (?, ?, ?)').run(result.lastInsertRowid, uid, 'member');
+      }
+    }
+  }
+
   res.json({
     message: '수다방이 만들어졌습니다!',
     roomId: result.lastInsertRowid,
@@ -923,6 +932,7 @@ app.post('/api/rooms/:id/join', auth, (req, res) => {
   if (existing) return res.status(400).json({ error: '이미 참여 중입니다.' });
 
   if (room.type === 'private') return res.status(403).json({ error: '비공개 수다방입니다. 초대가 필요합니다.' });
+  if (room.type === 'limited') return res.status(403).json({ error: '일부공개 수다방입니다. 초대된 사용자만 참여할 수 있습니다.' });
 
   if (room.type === 'password') {
     const { password } = req.body;

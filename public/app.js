@@ -733,7 +733,7 @@ const App = {
                 <div class="room-card-v" onclick="App.joinRoom(${r.id}, '${r.type}')">
                   <div class="room-card-img">
                     ${r.type === 'private' ? '🔒' : r.type === 'password' ? '🔑' : '💬'}
-                    <span class="room-type-tag ${r.type}">${r.type === 'public' ? '공개' : r.type === 'private' ? '비공개' : '비밀번호'}</span>
+                    <span class="room-type-tag ${r.type}">${r.type === 'public' ? '공개' : r.type === 'limited' ? '일부공개' : r.type === 'private' ? '비공개' : '비밀번호'}</span>
                   </div>
                   <div class="room-card-body">
                     <div class="room-card-name">${this.escapeHtml(r.name)}</div>
@@ -1055,18 +1055,19 @@ const App = {
         <div class="tabs">
           <div class="tab active" onclick="App.filterRooms('all', this)">전체</div>
           <div class="tab" onclick="App.filterRooms('public', this)">공개</div>
+          <div class="tab" onclick="App.filterRooms('limited', this)">일부공개</div>
           <div class="tab" onclick="App.filterRooms('password', this)">비밀번호</div>
         </div>
         <div id="rooms-list">
           ${data.rooms.map(r => `
             <div class="room-card" data-type="${r.type}" onclick="App.joinRoom(${r.id}, '${r.type}')">
-              <div class="room-icon">${r.type === 'private' ? '🔒' : r.type === 'password' ? '🔑' : '💬'}</div>
+              <div class="room-icon">${r.type === 'private' ? '🔒' : r.type === 'password' ? '🔑' : r.type === 'limited' ? '👥' : '💬'}</div>
               <div class="room-info">
                 <div class="room-name">${this.escapeHtml(r.name)}</div>
                 <div class="room-desc">${this.escapeHtml(r.description || '')}</div>
                 <div class="room-meta"><i class="fas fa-users"></i> ${r.member_count}명 · ${this.escapeHtml(r.owner_name)}</div>
               </div>
-              <span class="room-type-badge badge-${r.type}">${r.type === 'public' ? '공개' : r.type === 'private' ? '비공개' : '비밀번호'}</span>
+              <span class="room-type-badge badge-${r.type}">${r.type === 'public' ? '공개' : r.type === 'limited' ? '일부공개' : r.type === 'private' ? '비공개' : '비밀번호'}</span>
             </div>
           `).join('')}
           ${data.rooms.length === 0 ? `<div class="empty-state"><i class="fas fa-door-open"></i><p>${this.getChatLabel()}이 없습니다.</p></div>` : ''}
@@ -1083,14 +1084,20 @@ const App = {
     });
   },
 
-  showCreateRoom() {
+  async showCreateRoom() {
+    let friendsList = [];
+    try {
+      const fData = await this.api('/api/friends');
+      friendsList = fData.friends || [];
+    } catch(e) {}
     this.showModal(`${this.getChatLabel()} 만들기`, `
       <div class="form-group"><label class="form-label">방 이름</label><input type="text" class="form-input" id="room-name" placeholder="방 이름"></div>
       <div class="form-group"><label class="form-label">설명</label><input type="text" class="form-input" id="room-desc" placeholder="방 설명"></div>
       <div class="form-group">
         <label class="form-label">유형</label>
-        <select class="form-select" id="room-type" onchange="document.getElementById('room-pw-group').style.display=this.value==='password'?'block':'none'">
+        <select class="form-select" id="room-type" onchange="document.getElementById('room-pw-group').style.display=this.value==='password'?'block':'none';document.getElementById('room-invite-group').style.display=this.value==='limited'?'block':'none'">
           <option value="public">공개</option>
+          <option value="limited">일부공개</option>
           <option value="private">비공개</option>
           <option value="password">비밀번호</option>
         </select>
@@ -1099,14 +1106,32 @@ const App = {
         <label class="form-label">비밀번호</label>
         <input type="text" class="form-input" id="room-password" placeholder="비밀번호">
       </div>
+      <div class="form-group" id="room-invite-group" style="display:none">
+        <label class="form-label">초대할 친구 선택</label>
+        <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px">
+          ${friendsList.length > 0 ? friendsList.map(f => `
+            <label style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer">
+              <input type="checkbox" class="invite-friend-cb" value="${f.id}">
+              <img src="${this.escapeHtml(f.profile_image)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">
+              <span style="font-size:14px">${this.escapeHtml(f.nickname)}</span>
+            </label>
+          `).join('') : '<p style="font-size:13px;color:var(--text-secondary);text-align:center;padding:12px">친구가 없습니다. 먼저 친구를 추가하세요.</p>'}
+        </div>
+      </div>
       <p style="font-size:13px;color:var(--warning);margin-bottom:16px"><i class="fas fa-coins"></i> 10${this.getCoinName()}이 차감됩니다 (보유: ${this.user.coins}${this.getCoinName()})</p>
     `, async () => {
       try {
+        const invitedUsers = [...document.querySelectorAll('.invite-friend-cb:checked')].map(cb => parseInt(cb.value));
+        const roomType = document.getElementById('room-type').value;
+        if (roomType === 'limited' && invitedUsers.length === 0) {
+          return this.showToast('일부공개 방은 최소 1명을 초대해야 합니다.', 'error');
+        }
         const data = await this.api('/api/rooms', { method: 'POST', body: {
           name: document.getElementById('room-name').value,
           description: document.getElementById('room-desc').value,
-          type: document.getElementById('room-type').value,
-          password: document.getElementById('room-password').value
+          type: roomType,
+          password: document.getElementById('room-password').value,
+          invitedUsers: invitedUsers
         }});
         this.closeModal();
         this.showToast(data.message + (data.password ? ` 비밀번호: ${data.password}` : ''), 'success');
@@ -1131,6 +1156,21 @@ const App = {
       });
     } else if (type === 'private') {
       this.showToast(`비공개 ${this.getChatLabel()}입니다. 초대가 필요합니다.`, 'warning');
+    } else if (type === 'limited') {
+      try {
+        await this.api(`/api/rooms/${roomId}/join`, { method: 'POST' });
+        this.currentChatRoom = roomId;
+        this.currentPage = 'chat';
+        this.loadChatRoom(roomId);
+      } catch (e) {
+        if (e.message.includes('이미 참여')) {
+          this.currentChatRoom = roomId;
+          this.currentPage = 'chat';
+          this.loadChatRoom(roomId);
+        } else {
+          this.showToast(e.message, 'warning');
+        }
+      }
     } else {
       try {
         await this.api(`/api/rooms/${roomId}/join`, { method: 'POST' });
