@@ -828,7 +828,7 @@ const App = {
     let typingTimeout;
     chatInput.addEventListener('input', () => {
       clearTimeout(typingTimeout);
-      this.socket.emit('typing', { roomId });
+      if (this.socket && this.socket.connected) this.socket.emit('typing', { roomId });
       typingTimeout = setTimeout(() => {}, 2000);
     });
 
@@ -909,7 +909,12 @@ const App = {
         body: formData
       });
       const data = await res.json();
-      this.socket.emit('chatMessage', { roomId: this.currentChatRoom, content: data.url, type: 'image' });
+      if (this.socket && this.socket.connected) {
+        this.socket.emit('chatMessage', { roomId: this.currentChatRoom, content: data.url, type: 'image' });
+      } else {
+        const msgData = await this.api(`/api/rooms/${this.currentChatRoom}/messages`, { method: 'POST', body: { content: data.url, type: 'image' } });
+        this.appendChatMessage(msgData.message);
+      }
     } catch (e) { this.showToast('이미지 업로드에 실패했습니다.', 'error'); }
     input.value = '';
   },
@@ -976,7 +981,25 @@ const App = {
     } catch (e) {}
 
     const dmInput = document.getElementById('dm-input');
-    dmInput.addEventListener('input', () => { this.socket.emit('dmTyping', { roomId }); });
+    dmInput.addEventListener('input', () => { if (this.socket && this.socket.connected) this.socket.emit('dmTyping', { roomId }); });
+
+    if (this._dmPoll) clearInterval(this._dmPoll);
+    if (!this.socket || !this.socket.connected) {
+      this._dmPoll = setInterval(async () => {
+        if (this.currentPage !== 'dm-chat' || !this.currentDMRoom) { clearInterval(this._dmPoll); return; }
+        try {
+          const d = await this.api(`/api/dm/${roomId}/messages`);
+          const container = document.getElementById('dm-messages');
+          if (!container) { clearInterval(this._dmPoll); return; }
+          const existing = container.querySelectorAll('.chat-msg').length;
+          if (d.messages.length > existing) {
+            container.innerHTML = '';
+            d.messages.forEach(msg => this.appendDMMessage(msg, false));
+            container.scrollTop = container.scrollHeight;
+          }
+        } catch (e) {}
+      }, 3000);
+    }
   },
 
   appendDMMessage(msg, scroll = true) {
@@ -4318,31 +4341,58 @@ const App = {
       container.scrollTop = container.scrollHeight;
     } catch (e) {}
 
-    this.socket.on('teacherMessage', (msg) => {
-      const container = document.getElementById('teacher-messages');
-      if (!container) return;
-      const isOwn = msg.nickname === this.user.nickname;
-      const div = document.createElement('div');
-      div.className = `chat-msg ${isOwn ? 'own' : ''}`;
-      div.innerHTML = `
-        ${!isOwn ? `<img class="chat-msg-avatar" src="${msg.profile_image}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%236C63FF%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22 fill=%22white%22>👤</text></svg>'">` : ''}
-        <div class="chat-msg-body">
-          ${!isOwn ? `<div class="chat-msg-name">${this.escapeHtml(msg.nickname)}</div>` : ''}
-          <div class="chat-bubble">${this.escapeHtml(msg.content)}</div>
-          <div class="chat-time">${this.formatTimeShort(msg.created_at)}</div>
-        </div>
-      `;
-      container.appendChild(div);
-      container.scrollTop = container.scrollHeight;
-    });
+    if (this.socket && this.socket.connected) {
+      this.socket.on('teacherMessage', (msg) => {
+        this._appendTeacherMsg(msg);
+      });
+    } else {
+      if (this._teacherPoll) clearInterval(this._teacherPoll);
+      this._teacherPoll = setInterval(async () => {
+        try {
+          const d = await this.api(`/api/teacher/chat-rooms/${roomId}/messages`);
+          const container = document.getElementById('teacher-messages');
+          if (!container) { clearInterval(this._teacherPoll); return; }
+          const existing = container.querySelectorAll('.chat-msg').length;
+          if (d.messages.length > existing) {
+            container.innerHTML = '';
+            d.messages.forEach(msg => this._appendTeacherMsg(msg));
+            container.scrollTop = container.scrollHeight;
+          }
+        } catch (e) {}
+      }, 3000);
+    }
   },
 
-  sendTeacherMessage(roomId) {
+  _appendTeacherMsg(msg) {
+    const container = document.getElementById('teacher-messages');
+    if (!container) return;
+    const isOwn = msg.nickname === this.user.nickname;
+    const div = document.createElement('div');
+    div.className = `chat-msg ${isOwn ? 'own' : ''}`;
+    div.innerHTML = `
+      ${!isOwn ? `<img class="chat-msg-avatar" src="${msg.profile_image}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%236C63FF%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22 fill=%22white%22>👤</text></svg>'">` : ''}
+      <div class="chat-msg-body">
+        ${!isOwn ? `<div class="chat-msg-name">${this.escapeHtml(msg.nickname)}</div>` : ''}
+        <div class="chat-bubble">${this.escapeHtml(msg.content)}</div>
+        <div class="chat-time">${this.formatTimeShort(msg.created_at)}</div>
+      </div>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  },
+
+  async sendTeacherMessage(roomId) {
     const input = document.getElementById('teacher-input');
     const content = input.value.trim();
     if (!content) return;
-    this.socket.emit('teacherMessage', { roomId, content });
     input.value = '';
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('teacherMessage', { roomId, content });
+    } else {
+      try {
+        await this.api(`/api/teacher/chat-rooms/${roomId}/messages`, { method: 'POST', body: { content } });
+      } catch (e) { this.showToast(e.message, 'error'); }
+    }
   },
 
   // ==================== STUDENT DASHBOARD ====================

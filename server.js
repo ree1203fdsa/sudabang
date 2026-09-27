@@ -1338,6 +1338,26 @@ app.get('/api/teacher/chat-rooms/:id/messages', teacherAuth, (req, res) => {
   res.json({ messages });
 });
 
+app.post('/api/teacher/chat-rooms/:id/messages', teacherAuth, (req, res) => {
+  const { content } = req.body;
+  if (!content) return res.status(400).json({ error: '메시지를 입력하세요.' });
+  const result = db.prepare('INSERT INTO teacher_messages (room_id, teacher_id, content, type) VALUES (?, ?, ?, ?)').run(
+    req.params.id, req.teacher.id, content, 'text'
+  );
+  const msg = {
+    id: result.lastInsertRowid,
+    room_id: parseInt(req.params.id),
+    teacher_id: req.teacher.id,
+    content,
+    type: 'text',
+    nickname: req.user.nickname,
+    profile_image: req.user.profile_image,
+    created_at: new Date().toISOString()
+  };
+  if (io) io.to(`teacher_room_${req.params.id}`).emit('teacherMessage', msg);
+  res.json({ message: msg });
+});
+
 // ==================== COUPON API ====================
 
 app.post('/api/coupons/redeem', auth, (req, res) => {
