@@ -903,8 +903,8 @@ app.post('/api/rooms', auth, levelCheck(19), (req, res) => {
     roomPassword = password || Math.random().toString(36).substr(2, 8);
   }
 
-  const result = db.prepare('INSERT INTO chat_rooms (name, description, type, password, image, owner_id) VALUES (?, ?, ?, ?, ?, ?)').run(
-    name, description || '', type || 'public', roomPassword ? bcrypt.hashSync(roomPassword, 10) : '', image || '', req.user.id
+  const result = db.prepare('INSERT INTO chat_rooms (name, description, type, password, plain_password, image, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+    name, description || '', type || 'public', roomPassword ? bcrypt.hashSync(roomPassword, 10) : '', roomPassword, image || '', req.user.id
   );
   db.prepare('INSERT INTO chat_room_members (room_id, user_id, role) VALUES (?, ?, ?)').run(result.lastInsertRowid, req.user.id, 'owner');
 
@@ -931,13 +931,15 @@ app.post('/api/rooms/:id/join', auth, (req, res) => {
   const existing = db.prepare('SELECT id FROM chat_room_members WHERE room_id = ? AND user_id = ?').get(room.id, req.user.id);
   if (existing) return res.status(400).json({ error: '이미 참여 중입니다.' });
 
-  if (room.type === 'private') return res.status(403).json({ error: '비공개 수다방입니다. 초대가 필요합니다.' });
-  if (room.type === 'limited') return res.status(403).json({ error: '일부공개 수다방입니다. 초대된 사용자만 참여할 수 있습니다.' });
+  if (req.user.role !== 'admin') {
+    if (room.type === 'private') return res.status(403).json({ error: '비공개 수다방입니다. 초대가 필요합니다.' });
+    if (room.type === 'limited') return res.status(403).json({ error: '일부공개 수다방입니다. 초대된 사용자만 참여할 수 있습니다.' });
 
-  if (room.type === 'password') {
-    const { password } = req.body;
-    if (!password || !bcrypt.compareSync(password, room.password)) {
-      return res.status(403).json({ error: '비밀번호가 올바르지 않습니다.' });
+    if (room.type === 'password') {
+      const { password } = req.body;
+      if (!password || !bcrypt.compareSync(password, room.password)) {
+        return res.status(403).json({ error: '비밀번호가 올바르지 않습니다.' });
+      }
     }
   }
 

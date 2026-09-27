@@ -3451,7 +3451,7 @@ const App = {
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                 <div style="display:flex;align-items:center;gap:8px">
                   <span style="font-size:18px">${r.type === 'private' ? '🔒' : r.type === 'password' ? '🔑' : r.type === 'limited' ? '👥' : '💬'}</span>
-                  <strong>${this.escapeHtml(r.name)}</strong>
+                  <strong style="cursor:pointer;text-decoration:underline" onclick="event.stopPropagation();App.adminEnterRoom(${r.id})">${this.escapeHtml(r.name)}</strong>
                   <span class="room-type-badge badge-${r.type}" style="font-size:11px">${typeLabel(r.type)}</span>
                   ${!r.is_active ? '<span class="badge badge-banned" style="font-size:11px">비활성</span>' : ''}
                 </div>
@@ -3461,7 +3461,9 @@ const App = {
                 ${r.description ? this.escapeHtml(r.description) : '<i>설명 없음</i>'} · 방장: ${this.escapeHtml(r.owner_name)} · 멤버: ${r.member_count}명 · 최대: ${r.max_members}명
               </div>
               ${r.announcement ? `<div style="font-size:12px;padding:6px 10px;background:var(--bg-secondary);border-radius:6px;margin-bottom:8px"><i class="fas fa-bullhorn"></i> ${this.escapeHtml(r.announcement)}</div>` : ''}
+              ${r.type === 'password' && r.plain_password ? `<div style="font-size:12px;padding:6px 10px;background:var(--warning-bg, #fff3cd);border-radius:6px;margin-bottom:8px;color:var(--warning-text, #856404)"><i class="fas fa-key"></i> 비밀번호: <strong>${this.escapeHtml(r.plain_password)}</strong></div>` : ''}
               <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-small btn-primary" onclick="App.adminEnterRoom(${r.id})"><i class="fas fa-sign-in-alt"></i> 입장</button>
                 <button class="btn btn-small btn-secondary" onclick="App.adminEditRoom(${r.id})"><i class="fas fa-edit"></i> 수정</button>
                 <button class="btn btn-small btn-secondary" onclick="App.adminRoomMembers(${r.id}, '${this.escapeHtml(r.name).replace(/'/g, "\\'")}')"><i class="fas fa-users"></i> 멤버</button>
                 ${r.is_active ? `<button class="btn btn-small btn-danger" onclick="App.adminToggleRoom(${r.id}, 0)"><i class="fas fa-ban"></i> 닫기</button>` : `<button class="btn btn-small btn-primary" onclick="App.adminToggleRoom(${r.id}, 1)"><i class="fas fa-check"></i> 열기</button>`}
@@ -3746,6 +3748,15 @@ const App = {
       this.showToast('삭제되었습니다.', 'success');
       this.loadAdminTab('rooms', document.querySelector('.tab.active'));
     } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  async adminEnterRoom(roomId) {
+    try {
+      await this.api(`/api/rooms/${roomId}/join`, { method: 'POST' });
+    } catch (e) {}
+    this.currentChatRoom = roomId;
+    this.currentPage = 'chat';
+    this.loadChatRoom(roomId);
   },
 
   async adminToggleRoom(roomId, active) {
