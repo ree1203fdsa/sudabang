@@ -1553,6 +1553,41 @@ app.delete('/api/admin/rooms/:id', adminAuth, (req, res) => {
   res.json({ message: '수다방이 삭제되었습니다.' });
 });
 
+app.put('/api/admin/rooms/:id', adminAuth, (req, res) => {
+  const { name, description, type, announcement, max_members, is_active } = req.body;
+  const room = db.prepare('SELECT * FROM chat_rooms WHERE id = ?').get(req.params.id);
+  if (!room) return res.status(404).json({ error: '수다방을 찾을 수 없습니다.' });
+  db.prepare('UPDATE chat_rooms SET name = ?, description = ?, type = ?, announcement = ?, max_members = ?, is_active = ? WHERE id = ?').run(
+    name || room.name, description !== undefined ? description : room.description, type || room.type,
+    announcement !== undefined ? announcement : room.announcement, max_members || room.max_members,
+    is_active !== undefined ? is_active : room.is_active, req.params.id
+  );
+  db.prepare('INSERT INTO admin_logs (admin_id, action, target_type, target_id, detail) VALUES (?, ?, ?, ?, ?)').run(
+    req.user.id, 'editRoom', 'room', req.params.id, `수다방 수정: ${name || room.name}`
+  );
+  res.json({ message: '수다방이 수정되었습니다.' });
+});
+
+app.get('/api/admin/rooms/:id/members', adminAuth, (req, res) => {
+  const members = db.prepare(`
+    SELECT crm.*, u.nickname, u.profile_image, u.level, u.role as user_role
+    FROM chat_room_members crm JOIN users u ON crm.user_id = u.id
+    WHERE crm.room_id = ?
+    ORDER BY crm.role DESC, crm.joined_at ASC
+  `).all(req.params.id);
+  res.json({ members });
+});
+
+app.delete('/api/admin/rooms/:id/members/:userId', adminAuth, (req, res) => {
+  db.prepare('DELETE FROM chat_room_members WHERE room_id = ? AND user_id = ?').run(req.params.id, req.params.userId);
+  const room = db.prepare('SELECT name FROM chat_rooms WHERE id = ?').get(req.params.id);
+  const user = db.prepare('SELECT nickname FROM users WHERE id = ?').get(req.params.userId);
+  db.prepare('INSERT INTO admin_logs (admin_id, action, target_type, target_id, detail) VALUES (?, ?, ?, ?, ?)').run(
+    req.user.id, 'kickMember', 'room', req.params.id, `${user?.nickname} 강퇴 (${room?.name})`
+  );
+  res.json({ message: '멤버를 강퇴했습니다.' });
+});
+
 // 관리자 - 신고 관리
 app.get('/api/admin/reports', adminAuth, (req, res) => {
   const reports = db.prepare(`

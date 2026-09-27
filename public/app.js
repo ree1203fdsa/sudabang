@@ -3443,17 +3443,34 @@ const App = {
     } else if (tab === 'rooms') {
       try {
         const data = await this.api('/api/admin/rooms');
-        container.innerHTML = `<div style="overflow-x:auto">
-          <table class="admin-table">
-            <thead><tr><th>이름</th><th>유형</th><th>방장</th><th>멤버</th><th>작업</th></tr></thead>
-            <tbody>${data.rooms.map(r => `<tr>
-              <td>${this.escapeHtml(r.name)}</td>
-              <td><span class="room-type-badge badge-${r.type}">${r.type}</span></td>
-              <td>${this.escapeHtml(r.owner_name)}</td>
-              <td>${r.member_count}</td>
-              <td>${r.is_active ? `<button class="btn btn-small btn-danger" onclick="App.adminDeleteRoom(${r.id})">삭제</button>` : ''}</td>
-            </tr>`).join('')}</tbody>
-          </table></div>`;
+        const typeLabel = t => ({public:'공개', limited:'일부공개', private:'비공개', password:'비밀번호'}[t] || t);
+        container.innerHTML = `
+          <div style="margin-bottom:12px;font-size:13px;color:var(--text-secondary)">총 ${data.rooms.length}개 채팅방</div>
+          ${data.rooms.map(r => `
+            <div class="card" style="margin-bottom:12px;border-left:4px solid ${r.is_active ? 'var(--primary)' : 'var(--text-muted)'}">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:18px">${r.type === 'private' ? '🔒' : r.type === 'password' ? '🔑' : r.type === 'limited' ? '👥' : '💬'}</span>
+                  <strong>${this.escapeHtml(r.name)}</strong>
+                  <span class="room-type-badge badge-${r.type}" style="font-size:11px">${typeLabel(r.type)}</span>
+                  ${!r.is_active ? '<span class="badge badge-banned" style="font-size:11px">비활성</span>' : ''}
+                </div>
+                <span style="font-size:12px;color:var(--text-muted)">#${r.id}</span>
+              </div>
+              <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">
+                ${r.description ? this.escapeHtml(r.description) : '<i>설명 없음</i>'} · 방장: ${this.escapeHtml(r.owner_name)} · 멤버: ${r.member_count}명 · 최대: ${r.max_members}명
+              </div>
+              ${r.announcement ? `<div style="font-size:12px;padding:6px 10px;background:var(--bg-secondary);border-radius:6px;margin-bottom:8px"><i class="fas fa-bullhorn"></i> ${this.escapeHtml(r.announcement)}</div>` : ''}
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-small btn-secondary" onclick="App.adminEditRoom(${r.id})"><i class="fas fa-edit"></i> 수정</button>
+                <button class="btn btn-small btn-secondary" onclick="App.adminRoomMembers(${r.id}, '${this.escapeHtml(r.name).replace(/'/g, "\\'")}')"><i class="fas fa-users"></i> 멤버</button>
+                ${r.is_active ? `<button class="btn btn-small btn-danger" onclick="App.adminToggleRoom(${r.id}, 0)"><i class="fas fa-ban"></i> 닫기</button>` : `<button class="btn btn-small btn-primary" onclick="App.adminToggleRoom(${r.id}, 1)"><i class="fas fa-check"></i> 열기</button>`}
+                <button class="btn btn-small btn-danger" onclick="App.adminDeleteRoom(${r.id})"><i class="fas fa-trash"></i> 삭제</button>
+              </div>
+            </div>
+          `).join('')}
+          ${data.rooms.length === 0 ? '<div class="empty-state"><i class="fas fa-door-open"></i><p>채팅방이 없습니다.</p></div>' : ''}
+        `;
       } catch (e) {}
     } else if (tab === 'reports') {
       try {
@@ -3723,11 +3740,88 @@ const App = {
   },
 
   async adminDeleteRoom(roomId) {
-    if (!confirm('수다방을 삭제하시겠습니까?')) return;
+    if (!confirm('수다방을 완전히 삭제하시겠습니까?')) return;
     try {
       await this.api(`/api/admin/rooms/${roomId}`, { method: 'DELETE' });
       this.showToast('삭제되었습니다.', 'success');
       this.loadAdminTab('rooms', document.querySelector('.tab.active'));
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  async adminToggleRoom(roomId, active) {
+    try {
+      await this.api(`/api/admin/rooms/${roomId}`, { method: 'PUT', body: { is_active: active } });
+      this.showToast(active ? '채팅방을 열었습니다.' : '채팅방을 닫았습니다.', 'success');
+      this.loadAdminTab('rooms', document.querySelector('.tab.active'));
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  async adminEditRoom(roomId) {
+    try {
+      const data = await this.api('/api/admin/rooms');
+      const room = data.rooms.find(r => r.id === roomId);
+      if (!room) return;
+      this.showModal('채팅방 수정', `
+        <div class="form-group"><label class="form-label">방 이름</label><input type="text" class="form-input" id="edit-room-name" value="${this.escapeHtml(room.name)}"></div>
+        <div class="form-group"><label class="form-label">설명</label><input type="text" class="form-input" id="edit-room-desc" value="${this.escapeHtml(room.description || '')}"></div>
+        <div class="form-group"><label class="form-label">유형</label>
+          <select class="form-select" id="edit-room-type">
+            <option value="public" ${room.type==='public'?'selected':''}>공개</option>
+            <option value="limited" ${room.type==='limited'?'selected':''}>일부공개</option>
+            <option value="private" ${room.type==='private'?'selected':''}>비공개</option>
+            <option value="password" ${room.type==='password'?'selected':''}>비밀번호</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">공지사항</label><input type="text" class="form-input" id="edit-room-announce" value="${this.escapeHtml(room.announcement || '')}" placeholder="채팅방 공지"></div>
+        <div class="form-group"><label class="form-label">최대 인원</label><input type="number" class="form-input" id="edit-room-max" value="${room.max_members}" min="2" max="500"></div>
+      `, async () => {
+        try {
+          await this.api(`/api/admin/rooms/${roomId}`, { method: 'PUT', body: {
+            name: document.getElementById('edit-room-name').value,
+            description: document.getElementById('edit-room-desc').value,
+            type: document.getElementById('edit-room-type').value,
+            announcement: document.getElementById('edit-room-announce').value,
+            max_members: parseInt(document.getElementById('edit-room-max').value)
+          }});
+          this.closeModal();
+          this.showToast('수정되었습니다.', 'success');
+          this.loadAdminTab('rooms', document.querySelector('.tab.active'));
+        } catch (e) { this.showToast(e.message, 'error'); }
+      });
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  async adminRoomMembers(roomId, roomName) {
+    try {
+      const data = await this.api(`/api/admin/rooms/${roomId}/members`);
+      const roleLabel = r => ({owner:'방장', admin:'관리자', member:'멤버'}[r] || r);
+      this.showModal(`${roomName} 멤버 (${data.members.length}명)`, `
+        <div style="max-height:400px;overflow-y:auto">
+          ${data.members.map(m => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+              <div style="display:flex;align-items:center;gap:10px">
+                <img src="${this.escapeHtml(m.profile_image)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
+                <div>
+                  <div style="font-weight:600;font-size:14px">${this.escapeHtml(m.nickname)}</div>
+                  <div style="font-size:12px;color:var(--text-secondary)">Lv.${m.level} · ${roleLabel(m.role)}</div>
+                </div>
+              </div>
+              ${m.role !== 'owner' ? `<button class="btn btn-small btn-danger" onclick="App.adminKickMember(${roomId}, ${m.user_id}, '${roomName.replace(/'/g, "\\'")}')"><i class="fas fa-user-minus"></i></button>` : '<span style="font-size:12px;color:var(--primary)">방장</span>'}
+            </div>
+          `).join('')}
+          ${data.members.length === 0 ? '<p style="text-align:center;color:var(--text-muted);padding:20px">멤버가 없습니다.</p>' : ''}
+        </div>
+      `, null);
+    } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  async adminKickMember(roomId, userId, roomName) {
+    if (!confirm('이 멤버를 강퇴하시겠습니까?')) return;
+    try {
+      await this.api(`/api/admin/rooms/${roomId}/members/${userId}`, { method: 'DELETE' });
+      this.showToast('강퇴되었습니다.', 'success');
+      this.closeModal();
+      this.adminRoomMembers(roomId, roomName);
     } catch (e) { this.showToast(e.message, 'error'); }
   },
 
