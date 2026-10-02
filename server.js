@@ -100,11 +100,66 @@ const BAD_WORDS = [
   '꺼져', '죽어', '니애미', '느금마', '패드립', '일베', '한남충', '김치녀',
   '틀딱', '급식충', '맘충', '좆', 'ㅈ같', '엠창', '뒤지', '디져', '니미',
   '새끼', 'ㅅㄲ', '미친', 'ㅁㅊ', '닥쳐', 'ㄷㅊ', '개같', '멍청',
+  '씹', '존나', 'ㅈㄴ', '썅', '엿먹', '쓰레기', '찐따', '등신',
+];
+
+const CHAR_MAP = {
+  '1': 'i', '!': 'i', '|': 'i', 'l': 'i',
+  '0': 'o', '@': 'a', '3': 'e',
+  'ㅣ': 'i', 'ㅏ': 'a', 'ㅓ': 'e', 'ㅗ': 'o',
+};
+
+function normalizeText(text) {
+  let result = text.toLowerCase();
+  result = result.replace(/[\s\.\,\-\_\~\*\+\#\!\?\(\)\[\]\{\}\/\\\'\"]+/g, '');
+  for (const [from, to] of Object.entries(CHAR_MAP)) {
+    result = result.split(from).join(to);
+  }
+  return result;
+}
+
+function stripNonKorean(text) {
+  return text.replace(/[^ㄱ-ㅎㅏ-ㅣ가-힣]/g, '');
+}
+
+const JAMO_PATTERNS = [
+  [/ㅅ/, /[ㅂ바빠]/], // ㅅㅂ
+  [/ㅂ/, /[ㅅ사싸]/], // ㅂㅅ
+  [/ㅈ/, /[ㄹ라]/],   // ㅈㄹ
+  [/ㅁ/, /[ㅊ차]/],   // ㅁㅊ
+  [/ㄷ/, /[ㅊ차]/],   // ㄷㅊ
+  [/ㅅ/, /[ㄲ까]/],   // ㅅㄲ
+  [/ㅈ/, /[ㄴ나]/],   // ㅈㄴ
+];
+
+const EVASION_PATTERNS = [
+  /[시씨][^가-힣]*[발빨]/gi,
+  /[ㅅㅆ][^ㄱ-ㅎㅏ-ㅣ가-힣]*[ㅂ바빠발빨]/gi,
+  /개[^가-힣]*새[^가-힣]*끼/gi,
+  /병[^가-힣]*신/gi,
+  /지[^가-힣]*랄/gi,
+  /미[^가-힣]*친/gi,
+  /새[^가-힣]*끼/gi,
+  /닥[^가-힣]*쳐/gi,
+  /존[^가-힣]*나/gi,
+  /ㅂ[^ㄱ-ㅎㅏ-ㅣ가-힣]*[ㅅ사싸]/gi,
+  /ㅈ[^ㄱ-ㅎㅏ-ㅣ가-힣]*[ㄹ라랄]/gi,
+  /ㅁ[^ㄱ-ㅎㅏ-ㅣ가-힣]*[ㅊ차친]/gi,
+  /ㄷ[^ㄱ-ㅎㅏ-ㅣ가-힣]*[ㅊ차쳐]/gi,
+  /ㅅ[^ㄱ-ㅎㅏ-ㅣ가-힣]*[ㄲ까끼]/gi,
+  /ㅈ[^ㄱ-ㅎㅏ-ㅣ가-힣]*[ㄴ나]/gi,
 ];
 
 function containsBadWords(text) {
-  const lower = text.toLowerCase();
-  return BAD_WORDS.some(word => lower.includes(word));
+  const normalized = normalizeText(text);
+  if (BAD_WORDS.some(word => normalized.includes(word))) return true;
+  const koreanOnly = stripNonKorean(text);
+  if (BAD_WORDS.some(word => koreanOnly.includes(word))) return true;
+  for (const pattern of EVASION_PATTERNS) {
+    pattern.lastIndex = 0;
+    if (pattern.test(text)) return true;
+  }
+  return false;
 }
 
 function filterBadWords(text) {
@@ -112,6 +167,9 @@ function filterBadWords(text) {
   for (const word of BAD_WORDS) {
     const regex = new RegExp(word, 'gi');
     filtered = filtered.replace(regex, '***');
+  }
+  for (const pattern of EVASION_PATTERNS) {
+    filtered = filtered.replace(pattern, '***');
   }
   return filtered;
 }
