@@ -28,6 +28,12 @@ class BetterSqlite3Compat {
   constructor(sqlDb) {
     this._db = sqlDb;
     this._dirty = false;
+    this._dirtyTables = new Set();
+  }
+
+  _trackTable(sql) {
+    const m = sql.match(/(?:INSERT\s+(?:OR\s+\w+\s+)?INTO|UPDATE|DELETE\s+FROM|ALTER\s+TABLE)\s+(\w+)/i);
+    if (m) this._dirtyTables.add(m[1]);
   }
 
   prepare(sql) {
@@ -39,6 +45,7 @@ class BetterSqlite3Compat {
         const lastId = db.exec('SELECT last_insert_rowid() as id')[0];
         const changes = db.getRowsModified();
         self._dirty = true;
+        self._trackTable(sql);
         return { lastInsertRowid: lastId ? lastId.values[0][0] : 0, changes };
       },
       get(...params) {
@@ -76,6 +83,7 @@ class BetterSqlite3Compat {
     this._db.run(sql);
     if (/^\s*(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)/i.test(sql)) {
       this._dirty = true;
+      this._trackTable(sql);
     }
   }
 
@@ -106,11 +114,13 @@ function getAllRows(db, tableName) {
   }
 }
 
-async function saveToFirebase(db) {
+async function saveToFirebase(db, forceAll) {
   if (!db._dirty) return;
   try {
+    const tablesToSave = forceAll ? ALL_TABLES : (db._dirtyTables.size > 0 ? [...db._dirtyTables] : ALL_TABLES);
+
     const payload = {};
-    for (const table of ALL_TABLES) {
+    for (const table of tablesToSave) {
       const rows = getAllRows(db, table);
       if (rows.length > 0) {
         payload[table] = {};
@@ -124,13 +134,14 @@ async function saveToFirebase(db) {
     payload._meta = { updatedAt: new Date().toISOString(), tableCount: ALL_TABLES.length };
 
     const res = await fetch(`${FIREBASE_URL}/sudabang.json`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     if (res.ok) {
       db._dirty = false;
-      console.log('[Firebase] 테이블별 데이터 저장 완료');
+      db._dirtyTables.clear();
+      console.log(`[Firebase] 저장 완료 (${tablesToSave.length}개 테이블)`);
     } else {
       console.error('[Firebase] 저장 실패:', res.status);
     }
@@ -1028,7 +1039,7 @@ async function initDatabase() {
   db.pragma('foreign_keys = ON');
 
   if (db._dirty) {
-    await saveToFirebase(db);
+    await saveToFirebase(db, true);
   }
 
   saveInterval = setInterval(() => {
@@ -1036,7 +1047,7 @@ async function initDatabase() {
   }, 10000);
 
   process.on('SIGINT', async () => {
-    await saveToFirebase(db);
+    await saveToFirebase(db, true);
     process.exit(0);
   });
 

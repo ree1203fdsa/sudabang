@@ -83,7 +83,10 @@ app.use((req, res, next) => {
   const origJson = res.json.bind(res);
   res.json = function(data) {
     if (db && db._dirty) {
-      saveToFirebase(db).then(() => origJson(data)).catch(() => origJson(data));
+      saveToFirebase(db).then(() => origJson(data)).catch((e) => {
+        console.error('[Firebase middleware] 저장 실패:', e.message);
+        origJson(data);
+      });
     } else {
       origJson(data);
     }
