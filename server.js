@@ -3027,46 +3027,6 @@ app.post('/api/profile-frames/equip', auth, (req, res) => {
   res.json({ message: frameId ? '프레임이 적용되었습니다!' : '프레임이 해제되었습니다.' });
 });
 
-// ==================== AI 챗봇 (Gemini) ====================
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const AI_SYSTEM_PROMPT = '너는 수다방 앱의 AI 도우미야. 친절하고 재미있게 대화해줘. 한국어로 답변해. 답변은 짧고 간결하게 해줘.';
-
-app.post('/api/ai/chat', auth, async (req, res) => {
-  if (!GEMINI_API_KEY) return res.status(500).json({ error: 'AI 기능이 설정되지 않았습니다.' });
-  const { message, history } = req.body;
-  if (!message || !message.trim()) return res.status(400).json({ error: '메시지를 입력해주세요.' });
-
-  try {
-    const contents = [];
-    if (history && history.length) {
-      for (const h of history.slice(-10)) {
-        contents.push({ role: h.role === 'ai' ? 'model' : 'user', parts: [{ text: h.text }] });
-      }
-    }
-    contents.push({ role: 'user', parts: [{ text: message }] });
-
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents,
-        systemInstruction: { parts: [{ text: AI_SYSTEM_PROMPT }] },
-        generationConfig: { maxOutputTokens: 500, temperature: 0.8 }
-      })
-    });
-
-    const data = await resp.json();
-    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-      res.json({ reply: data.candidates[0].content.parts[0].text });
-    } else {
-      res.status(500).json({ error: 'AI 응답을 받지 못했습니다.' });
-    }
-  } catch (e) {
-    console.error('AI Error:', e.message);
-    res.status(500).json({ error: 'AI 서비스에 연결할 수 없습니다.' });
-  }
-});
-
 // SPA 라우팅
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

@@ -438,7 +438,6 @@ const App = {
       'my-reports': () => this.renderMyReports(),
       polls: () => this.renderPolls(),
       'release-notes': () => this.renderReleaseNotes(),
-      'ai-chat': () => this.renderAIChat(),
       'minigame-ranking': () => this.renderMinigameRanking(),
       'hall-of-fame': () => this.renderHallOfFame(),
       'event-calendar': () => this.renderEventCalendar(),
@@ -608,10 +607,6 @@ const App = {
         <div class="stat-card" onclick="App.navigate('polls')" style="cursor:pointer">
           <div class="stat-icon" style="background:#1E90FF20;color:#1E90FF"><i class="fas fa-poll"></i></div>
           <div class="stat-label">투표</div>
-        </div>
-        <div class="stat-card" onclick="App.navigate('ai-chat')" style="cursor:pointer">
-          <div class="stat-icon" style="background:#6C63FF20;color:#6C63FF"><i class="fas fa-robot"></i></div>
-          <div class="stat-label">AI 채팅</div>
         </div>
         <div class="stat-card" onclick="App.navigate('hall-of-fame')" style="cursor:pointer">
           <div class="stat-icon" style="background:#FFD70020;color:#FFD700"><i class="fas fa-crown"></i></div>
@@ -2767,85 +2762,6 @@ const App = {
     } catch (e) { this.showToast(e.message, 'error'); }
   },
 
-  // ==================== AI CHAT ====================
-  _aiHistory: [],
-
-  renderAIChat() {
-    const content = document.getElementById('page-content');
-    content.innerHTML = `
-      <div style="display:flex;flex-direction:column;height:calc(100vh - var(--header-h) - var(--bottom-nav-h) - 16px)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <button class="page-back" onclick="App.navigate('home')"><i class="fas fa-arrow-left"></i></button>
-          <div class="page-title" style="margin-bottom:0"><i class="fas fa-robot page-title-icon" style="color:#6C63FF"></i> AI 채팅</div>
-          <button class="btn" onclick="App._aiHistory=[];App.renderAIChat()" style="margin-left:auto;font-size:12px;padding:6px 12px"><i class="fas fa-trash"></i> 초기화</button>
-        </div>
-        <div id="ai-messages" style="flex:1;overflow-y:auto;padding-bottom:8px">
-          <div style="display:flex;gap:10px;margin-bottom:12px">
-            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6C63FF,#FF6B9D);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-robot" style="color:white;font-size:16px"></i></div>
-            <div class="card" style="padding:12px;max-width:80%;margin:0">안녕! 나는 ${this.getBrandName()} AI야 🤖<br>무엇이든 물어봐!</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
-          <input type="text" id="ai-input" class="input" placeholder="메시지를 입력하세요..." style="flex:1" onkeypress="if(event.key==='Enter')App.sendAIMessage()">
-          <button class="btn btn-primary" onclick="App.sendAIMessage()" id="ai-send-btn" style="padding:10px 16px"><i class="fas fa-paper-plane"></i></button>
-        </div>
-      </div>
-    `;
-    const container = document.getElementById('ai-messages');
-    for (const msg of this._aiHistory) {
-      this._appendAIBubble(container, msg.role, msg.text);
-    }
-    container.scrollTop = container.scrollHeight;
-  },
-
-  _appendAIBubble(container, role, text) {
-    const div = document.createElement('div');
-    div.style.cssText = 'display:flex;gap:10px;margin-bottom:12px;' + (role === 'user' ? 'flex-direction:row-reverse' : '');
-    const avatar = role === 'user'
-      ? `<img src="${this.user.profile_image}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%236C63FF%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22 fill=%22white%22>👤</text></svg>'">`
-      : `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6C63FF,#FF6B9D);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-robot" style="color:white;font-size:16px"></i></div>`;
-    const bgColor = role === 'user' ? 'var(--primary)' : 'var(--bg-card)';
-    const textColor = role === 'user' ? 'white' : 'var(--text)';
-    div.innerHTML = `${avatar}<div style="padding:10px 14px;border-radius:16px;max-width:80%;background:${bgColor};color:${textColor};font-size:14px;line-height:1.6;white-space:pre-wrap;box-shadow:var(--shadow)">${this.escapeHtml(text)}</div>`;
-    container.appendChild(div);
-  },
-
-  async sendAIMessage() {
-    const input = document.getElementById('ai-input');
-    const message = input.value.trim();
-    if (!message) return;
-    input.value = '';
-
-    const container = document.getElementById('ai-messages');
-    this._aiHistory.push({ role: 'user', text: message });
-    this._appendAIBubble(container, 'user', message);
-
-    const loadingDiv = document.createElement('div');
-    loadingDiv.style.cssText = 'display:flex;gap:10px;margin-bottom:12px';
-    loadingDiv.innerHTML = `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6C63FF,#FF6B9D);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-robot" style="color:white;font-size:16px"></i></div><div class="card" style="padding:12px;margin:0"><i class="fas fa-spinner fa-spin"></i> 생각 중...</div>`;
-    container.appendChild(loadingDiv);
-    container.scrollTop = container.scrollHeight;
-
-    const sendBtn = document.getElementById('ai-send-btn');
-    sendBtn.disabled = true;
-
-    try {
-      const data = await this.api('/api/ai/chat', {
-        method: 'POST',
-        body: { message, history: this._aiHistory.slice(-10) }
-      });
-      loadingDiv.remove();
-      this._aiHistory.push({ role: 'ai', text: data.reply });
-      this._appendAIBubble(container, 'ai', data.reply);
-    } catch (e) {
-      loadingDiv.remove();
-      this._appendAIBubble(container, 'ai', '⚠️ ' + e.message);
-    }
-    sendBtn.disabled = false;
-    container.scrollTop = container.scrollHeight;
-    input.focus();
-  },
-
   // ==================== RELEASE NOTES ====================
   async renderReleaseNotes() {
     const content = document.getElementById('page-content');
@@ -3121,10 +3037,6 @@ const App = {
         </div>
         <div class="settings-item" onclick="App.showBlockList()">
           <div class="settings-item-left"><i class="fas fa-ban"></i><span class="settings-item-label">차단 목록</span></div>
-          <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
-        </div>
-        <div class="settings-item" onclick="App.navigate('ai-chat')">
-          <div class="settings-item-left"><i class="fas fa-robot" style="color:#6C63FF"></i><span class="settings-item-label">AI 채팅</span></div>
           <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
         </div>
         <div class="settings-item" onclick="App.navigate('release-notes')">
