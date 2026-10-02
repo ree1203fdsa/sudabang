@@ -955,15 +955,15 @@ async function initDatabase() {
     console.log('[Firebase] 모든 테이블 데이터 복원 완료');
   }
 
-  const adminPassword = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin1234', 10);
-  const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get('ree1203');
+  const adminExists = db.prepare('SELECT id, role FROM users WHERE username = ?').get('ree1203');
   if (!adminExists) {
+    const adminPassword = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin1234', 10);
     db.prepare(`
       INSERT INTO users (username, password, nickname, role, level, coins)
       VALUES (?, ?, ?, 'admin', 99, 99999)
     `).run('ree1203', adminPassword, '개발자');
-  } else {
-    db.prepare('UPDATE users SET password = ?, role = ? WHERE username = ?').run(adminPassword, 'admin', 'ree1203');
+  } else if (adminExists.role !== 'admin') {
+    db.prepare('UPDATE users SET role = ? WHERE username = ?').run('admin', 'ree1203');
   }
 
   const itemCount = db.prepare('SELECT COUNT(*) as cnt FROM shop_items').get();
@@ -1027,8 +1027,9 @@ async function initDatabase() {
 
   db.pragma('foreign_keys = ON');
 
-  db._dirty = true;
-  await saveToFirebase(db);
+  if (db._dirty) {
+    await saveToFirebase(db);
+  }
 
   saveInterval = setInterval(() => {
     saveToFirebase(db).catch(() => {});
