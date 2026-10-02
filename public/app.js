@@ -3039,10 +3039,10 @@ const App = {
           <div class="settings-item-left"><i class="fas fa-ban"></i><span class="settings-item-label">차단 목록</span></div>
           <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
         </div>
-        <div class="settings-item" onclick="App.navigate('release-notes')">
+        ${this.user.role === 'admin' ? `<div class="settings-item" onclick="App.navigate('release-notes')">
           <div class="settings-item-left"><i class="fas fa-clipboard-list" style="color:#6C63FF"></i><span class="settings-item-label">릴리즈 노트</span></div>
           <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>
-        </div>
+        </div>` : ''}
         <div class="settings-item" onclick="App.testPush()">
           <div class="settings-item-left"><i class="fas fa-bell" style="color:#FF6B6B"></i><span class="settings-item-label">푸시 알림 테스트</span></div>
           <i class="fas fa-chevron-right" style="color:var(--text-muted)"></i>

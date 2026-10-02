@@ -2811,7 +2811,7 @@ app.post('/api/upload', auth, upload.single('file'), (req, res) => {
 });
 
 // ==================== 릴리즈 노트 ====================
-app.get('/api/release-notes', (req, res) => {
+app.get('/api/release-notes', adminAuth, (req, res) => {
   const notes = db.prepare('SELECT rn.*, u.nickname FROM release_notes rn JOIN users u ON rn.created_by = u.id ORDER BY rn.created_at DESC').all();
   res.json({ notes });
 });
