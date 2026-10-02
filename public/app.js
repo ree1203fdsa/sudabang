@@ -1138,6 +1138,20 @@ const App = {
 
   async joinRoom(roomId, type) {
     if (type === 'password') {
+      try {
+        await this.api(`/api/rooms/${roomId}/join`, { method: 'POST' });
+        this.currentChatRoom = roomId;
+        this.currentPage = 'chat';
+        this.loadChatRoom(roomId);
+        return;
+      } catch (e) {
+        if (e.message.includes('이미 참여')) {
+          this.currentChatRoom = roomId;
+          this.currentPage = 'chat';
+          this.loadChatRoom(roomId);
+          return;
+        }
+      }
       this.showModal('비밀번호 입력', `
         <div class="form-group"><label class="form-label">비밀번호</label><input type="password" class="form-input" id="join-password" placeholder="비밀번호를 입력하세요"></div>
       `, async () => {
