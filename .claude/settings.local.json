@@ -118,7 +118,8 @@
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; $resp = Invoke-RestMethod -Uri \"https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app/sudabang/users.json\"; \\($resp | Get-Member -MemberType NoteProperty\\).Name)",
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; $login = Invoke-RestMethod -Uri \"http://localhost:3000/api/auth/login\" -Method POST -ContentType \"application/json\" -Body '{\"username\":\"savetest001\",\"password\":\"test1234\"}'; $login.user.id; $login.user.nickname)",
       "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; $resp = Invoke-RestMethod -Uri \"https://tnekqkd-default-rtdb.asia-southeast1.firebasedatabase.app/sudabang/users/r_14.json\"; if \\($resp\\) { $resp.username; $resp.nickname } else { \"NOT FOUND\" })",
-      "PowerShell(Start-Sleep 6; $env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; $login = Invoke-RestMethod -Uri \"http://localhost:3000/api/auth/login\" -Method POST -ContentType \"application/json\" -Body '{\"username\":\"savetest001\",\"password\":\"test1234\"}'; \"ID: $\\($login.user.id\\) / Nickname: $\\($login.user.nickname\\)\")"
+      "PowerShell(Start-Sleep 6; $env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; $login = Invoke-RestMethod -Uri \"http://localhost:3000/api/auth/login\" -Method POST -ContentType \"application/json\" -Body '{\"username\":\"savetest001\",\"password\":\"test1234\"}'; \"ID: $\\($login.user.id\\) / Nickname: $\\($login.user.nickname\\)\")",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; cd \"C:\\\\Users\\\\ree12\\\\Desktop\\\\바이브코딩\\\\수다방\"; git push)"
     ]
   }
 }

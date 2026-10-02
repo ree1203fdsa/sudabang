@@ -772,9 +772,13 @@ const App = {
   async quickAttendance() {
     try {
       const data = await this.api('/api/attendance', { method: 'POST' });
-      this.showToast(`출석 완료! 연속 ${data.streak}일 🔥`, 'success');
       const btn = document.getElementById('quick-attend-btn');
       if (btn) { btn.textContent = '완료 ✓'; btn.classList.add('done'); btn.disabled = true; }
+      if (data.roulette) {
+        this.showAttendanceRoulette(data);
+      } else {
+        this.showToast(`출석 완료! 연속 ${data.streak}일 🔥`, 'success');
+      }
     } catch (e) { this.showToast(e.message, 'error'); }
   },
 
@@ -1634,9 +1638,74 @@ const App = {
   async checkAttendance() {
     try {
       const data = await this.api('/api/attendance', { method: 'POST' });
-      this.showToast(`출석 완료! 연속 ${data.streak}일 🔥`, 'success');
-      this.renderAttendance();
+      if (data.roulette) {
+        this.showAttendanceRoulette(data);
+      } else {
+        this.showToast(`출석 완료! 연속 ${data.streak}일 🔥`, 'success');
+        this.renderAttendance();
+      }
     } catch (e) { this.showToast(e.message, 'error'); }
+  },
+
+  showAttendanceRoulette(data) {
+    const items = data.roulette.items;
+    const resultLabel = data.roulette.result;
+    const resultIdx = items.indexOf(resultLabel);
+    const colors = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD','#FF9FF3','#54A0FF'];
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;flex-direction:column';
+
+    const size = Math.min(window.innerWidth - 40, 320);
+    const half = size / 2;
+    const segAngle = 360 / items.length;
+
+    let svgSlices = '';
+    items.forEach((item, i) => {
+      const startA = (i * segAngle - 90) * Math.PI / 180;
+      const endA = ((i + 1) * segAngle - 90) * Math.PI / 180;
+      const x1 = half + half * Math.cos(startA);
+      const y1 = half + half * Math.sin(startA);
+      const x2 = half + half * Math.cos(endA);
+      const y2 = half + half * Math.sin(endA);
+      const large = segAngle > 180 ? 1 : 0;
+      svgSlices += `<path d="M${half},${half} L${x1},${y1} A${half},${half} 0 ${large},1 ${x2},${y2} Z" fill="${colors[i % colors.length]}"/>`;
+      const midA = ((i + 0.5) * segAngle - 90) * Math.PI / 180;
+      const tx = half + half * 0.65 * Math.cos(midA);
+      const ty = half + half * 0.65 * Math.sin(midA);
+      const rot = (i + 0.5) * segAngle;
+      svgSlices += `<text x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="11" font-weight="700" transform="rotate(${rot},${tx},${ty})">${item}</text>`;
+    });
+
+    overlay.innerHTML = `
+      <div style="color:white;font-size:22px;font-weight:800;margin-bottom:16px;text-shadow:0 2px 8px rgba(0,0,0,0.5)">🎰 출석 룰렛</div>
+      <div style="position:relative;width:${size}px;height:${size}px">
+        <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:28px;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))">▼</div>
+        <svg id="roulette-wheel" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="border-radius:50%;box-shadow:0 0 30px rgba(108,99,255,0.5);transition:transform 4s cubic-bezier(0.17,0.67,0.12,0.99)">
+          ${svgSlices}
+          <circle cx="${half}" cy="${half}" r="20" fill="white" stroke="#333" stroke-width="2"/>
+          <circle cx="${half}" cy="${half}" r="6" fill="#6C63FF"/>
+        </svg>
+      </div>
+      <div id="roulette-result" style="color:white;font-size:18px;font-weight:700;margin-top:20px;min-height:28px;text-shadow:0 2px 8px rgba(0,0,0,0.5)">돌아가는 중...</div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const targetAngle = 360 * 5 + (360 - (resultIdx * segAngle + segAngle / 2));
+    setTimeout(() => {
+      document.getElementById('roulette-wheel').style.transform = `rotate(${targetAngle}deg)`;
+    }, 100);
+
+    setTimeout(() => {
+      const bonusText = data.roulette.streakBonus ? ' (7일+ 연속 보너스 1.5배!)' : '';
+      document.getElementById('roulette-result').innerHTML = `🎉 <span style="color:#FFEAA7;font-size:24px">${data.roulette.coins} ${this.getCoinName()}</span> 당첨!${bonusText}`;
+      setTimeout(() => {
+        overlay.style.transition = 'opacity 0.5s';
+        overlay.style.opacity = '0';
+        setTimeout(() => { overlay.remove(); this.renderAttendance(); }, 500);
+      }, 2500);
+    }, 4300);
   },
 
   // ==================== RANKING ====================

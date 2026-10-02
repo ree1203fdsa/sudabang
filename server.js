@@ -803,9 +803,30 @@ app.post('/api/attendance', auth, (req, res) => {
     }
   }
 
+  // 출석 룰렛 보상
+  const rouletteItems = [
+    { label: '5 코인', coins: 5, weight: 30 },
+    { label: '10 코인', coins: 10, weight: 25 },
+    { label: '20 코인', coins: 20, weight: 18 },
+    { label: '30 코인', coins: 30, weight: 12 },
+    { label: '50 코인', coins: 50, weight: 8 },
+    { label: '100 코인', coins: 100, weight: 4 },
+    { label: '200 코인', coins: 200, weight: 2 },
+    { label: '500 코인', coins: 500, weight: 1 },
+  ];
+  const totalWeight = rouletteItems.reduce((s, i) => s + i.weight, 0);
+  let rand = Math.random() * totalWeight;
+  let rouletteResult = rouletteItems[0];
+  for (const item of rouletteItems) {
+    rand -= item.weight;
+    if (rand <= 0) { rouletteResult = item; break; }
+  }
+  if (streak >= 7) rouletteResult.coins = Math.floor(rouletteResult.coins * 1.5);
+  addCoins(req.user.id, rouletteResult.coins, `출석 룰렛 보상`);
+
   updateMissionProgress(req.user.id, 'attendance');
   checkAchievements(req.user.id);
-  res.json({ message: '출석 완료!', streak, totalDays: records.length });
+  res.json({ message: '출석 완료!', streak, totalDays: records.length, roulette: { items: rouletteItems.map(i => i.label), result: rouletteResult.label, coins: rouletteResult.coins, streakBonus: streak >= 7 } });
 });
 
 // ==================== COINS API ====================
